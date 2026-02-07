@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>VIVArewind - 90s TV Live</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+        #player-container { position: relative; width: 100vw; height: 100vh; background: #000; }
+        #player { width: 100%; height: 100%; filter: contrast(1.1) saturate(1.2); pointer-events: none; }
+        
+        /* CRT & Scanline Overlay */
+        #player-container::after {
+            content: " "; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 3px, 3px 100%; z-index: 5; pointer-events: none;
+        }
+
+        #viva-logo { position: absolute; top: 40px; right: 50px; width: 100px; z-index: 10; opacity: 0.7; animation: flicker 5s infinite; }
+        
+        #song-info {
+            position: absolute; bottom: 10%; left: 5%; background: linear-gradient(90deg, #ff00ff, #00ffff);
+            color: white; padding: 12px 30px; font-weight: bold; text-transform: uppercase; font-style: italic;
+            box-shadow: 8px 8px 0px #000; z-index: 20; display: none;
+        }
+
+        @keyframes flicker { 0% { opacity: 0.6; } 5% { opacity: 0.8; } 10% { opacity: 0.55; } 100% { opacity: 0.6; } }
+    </style>
+</head>
+<body>
+
+<div id="player-container">
+    <div id="player"></div>
+    <img id="viva-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/VIVA_Logo.svg/2000px-VIVA_Logo.svg.png">
+    <div id="song-info">
+        <p id="track-artist" style="margin:0; font-size:18px;"></p>
+        <h2 id="track-title" style="margin:0; font-size:24px;"></h2>
+    </div>
+</div>
+
+<script>
+    // DEINE DATENBANK (Hier IDs einfügen oder musicVideos.json laden)
+    const musicVideos = [
+        { id: '98WtmW-lfeE', artist: 'Lucilectric', title: 'Mädchen' },
+        { id: 'mD2M0I9Cip4', artist: 'Die Fantastischen Vier', title: 'Die Da' },
+        { id: '8mQB566S78k', artist: 'Blümchen', title: 'Herz an Herz' },
+        { id: 'L-76X6-pGvM', artist: 'Snap!', title: 'Rhythm is a Dancer' }
+    ];
+    const vivaIdents = [{ id: '6C_m79X8H8I', artist: 'VIVA', title: 'Ident' }];
+
+    let musicQueue = [];
+    let songCounter = 0;
+    let player;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function playNext() {
+        let next;
+        if (songCounter >= 3) {
+            next = vivaIdents[Math.floor(Math.random() * vivaIdents.length)];
+            songCounter = 0;
+        } else {
+            if (musicQueue.length === 0) musicQueue = shuffle([...musicVideos]);
+            next = musicQueue.shift();
+            songCounter++;
+        }
+
+        if (!player) {
+            player = new YT.Player('player', {
+                videoId: next.id,
+                playerVars: { 'autoplay': 1, 'controls': 0, 'rel': 0, 'modestbranding': 1, 'iv_load_policy': 3 },
+                events: {
+                    'onReady': (e) => e.target.playVideo(),
+                    'onStateChange': (e) => { if (e.data === YT.PlayerState.ENDED) playNext(); },
+                    'onError': () => { console.log("Fehler, überspringe..."); playNext(); }
+                }
+            });
+        } else {
+            player.loadVideoById(next.id);
+        }
+
+        if (next.artist !== "VIVA") {
+            document.getElementById('track-artist').innerText = next.artist;
+            document.getElementById('track-title').innerText = next.title;
+            const info = document.getElementById('song-info');
+            setTimeout(() => { info.style.display = 'block'; setTimeout(() => info.style.display = 'none', 6000); }, 2000);
+        }
+    }
+
+    function onYouTubeIframeAPIReady() { playNext(); }
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>
