@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVA REWIND - INFINITY LOOP</title>
+    <title>VIVA REWIND - RANDOM INTERMISSION</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
@@ -16,7 +16,7 @@
 </head>
 <body>
 
-<div id="status-box">Loop-Status: Bereit</div>
+<div id="status-box">Playlist-Modus: Aktiv</div>
 <div id="overlay" onclick="powerOn()"><h1 style="color:#ffff00">START VIVA</h1></div>
 
 <div id="container-music" class="player-container"><div id="player-music"></div></div>
@@ -31,8 +31,15 @@
     let interReady = false;
     let hasSwitchedBack = false;
     
+    // MUSIK PLAYLIST
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
-    const singleIntermissionId = 'h07xiwYGLvs';
+    
+    // DEINE EINSPIELER LISTE (Hier IDs hinzufügen)
+    const intermissionList = [
+        'h07xiwYGLvs', // Trenner 1
+        'VId6Vv9S9M0', // Trenner 2
+        '8-nO87p97v8'  // Trenner 3
+    ];
 
     function onYouTubeIframeAPIReady() {
         const commonVars = { autoplay: 0, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3, enablejsapi: 1 };
@@ -42,10 +49,7 @@
             playerVars: commonVars,
             events: { 
                 'onStateChange': (e) => {
-                    if (e.data === YT.PlayerState.PLAYING) {
-                        console.log("Musik spielt - Watchdog startet");
-                        startWatchdog();
-                    }
+                    if (e.data === YT.PlayerState.PLAYING) startWatchdog();
                     if (e.data === YT.PlayerState.ENDED && mode === 'MUSIC') zapToInter();
                 }
             }
@@ -60,7 +64,7 @@
                         playerInter.pauseVideo();
                         isPreloading = false;
                         interReady = true;
-                        document.getElementById('status-box').innerText = "EINSPIELER GEPUFFERT";
+                        document.getElementById('status-box').innerText = "EINSPIELER VORGELADEN";
                     }
                     if (e.data === YT.PlayerState.ENDED && mode === 'INTER') zapToMusic();
                 }
@@ -72,24 +76,22 @@
         clearInterval(watchdog);
         watchdog = setInterval(() => {
             if (mode === 'MUSIC' && playerMusic.getDuration) {
-                const duration = playerMusic.getDuration();
-                const currentTime = playerMusic.getCurrentTime();
-                const timeLeft = duration - currentTime;
+                const timeLeft = playerMusic.getDuration() - playerMusic.getCurrentTime();
                 
-                // 1. Preload Einspieler (immer wieder neu für jeden Song)
+                // Preload eines ZUFÄLLIGEN Einspielers bei 45s
                 if (timeLeft <= 45 && !interReady && !isPreloading) {
                     isPreloading = true;
-                    console.log("Starte Preload Einspieler...");
+                    const randomId = intermissionList[Math.floor(Math.random() * intermissionList.length)];
+                    console.log("Preloading Random Intermission: " + randomId);
                     playerInter.mute();
-                    playerInter.loadVideoById(singleIntermissionId);
+                    playerInter.loadVideoById(randomId);
                 }
 
-                // 2. Wechsel bei 3 Sekunden Restzeit
+                // Wechsel bei 3s
                 if (timeLeft <= 3.0 && timeLeft > 0 && interReady) {
                     zapToInter();
                 }
-                
-                document.getElementById('status-box').innerText = "SONG ENDE IN: " + Math.round(timeLeft) + "s";
+                document.getElementById('status-box').innerText = "SONG: " + Math.round(timeLeft) + "s | NEXT: " + (interReady ? "READY" : "WAIT");
             }
 
             if (mode === 'INTER' && playerInter.getDuration) {
@@ -105,7 +107,6 @@
         if (mode === 'INTER') return;
         mode = 'INTER';
         hasSwitchedBack = false;
-        clearInterval(watchdog); // Watchdog kurz stoppen für Modus-Wechsel
         
         document.getElementById('container-music').style.opacity = "0";
         document.getElementById('container-inter').classList.add('active');
@@ -113,10 +114,7 @@
         playerInter.unMute();
         playerInter.playVideo();
         
-        setTimeout(() => {
-            playerMusic.stopVideo();
-            startWatchdog(); // Watchdog im INTER-Modus neu starten
-        }, 500);
+        setTimeout(() => playerMusic.stopVideo(), 500);
     }
 
     function zapToMusic() {
@@ -124,8 +122,8 @@
         hasSwitchedBack = true;
         
         mode = 'MUSIC';
-        interReady = false; // WICHTIG: Reset für den nächsten Song!
-        isPreloading = false; // WICHTIG: Reset für den nächsten Song!
+        interReady = false; 
+        isPreloading = false; 
         
         document.getElementById('container-inter').classList.remove('active');
         document.getElementById('container-music').style.opacity = "1";
@@ -136,9 +134,7 @@
             index: Math.floor(Math.random() * 50)
         });
 
-        setTimeout(() => {
-            playerInter.stopVideo();
-        }, 500);
+        setTimeout(() => playerInter.stopVideo(), 500);
     }
 
     function powerOn() {
