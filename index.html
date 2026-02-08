@@ -2,18 +2,42 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVA REWIND - HARD RESET</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIVA REWIND - START CONTROL</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+        :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+        
+        /* Startbildschirm */
+        #overlay { 
+            position: fixed; inset: 0; z-index: 9999; 
+            background: radial-gradient(circle, #1a4a9e 0%, #000 100%); 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            cursor: pointer; color: white; text-align: center;
+        }
+        .viva-btn { 
+            padding: 30px 60px; border: 6px solid #ffff00; 
+            font-size: 32px; color: #ffff00; text-transform: uppercase;
+            box-shadow: 10px 10px 0px #000; transition: transform 0.1s;
+        }
+        .viva-btn:active { transform: scale(0.95); }
+
         #player-container { position: absolute; inset: 0; z-index: 1; }
-        #overlay { position: fixed; inset: 0; z-index: 1000; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; }
-        #status-box { position: absolute; top: 20px; right: 20px; z-index: 2000; background: rgba(0,0,0,0.7); color: #0f0; padding: 10px; font-family: monospace; }
+        #status-box { position: absolute; top: 20px; right: 20px; z-index: 2000; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; font-family: monospace; border: 1px solid #0f0; }
+        
+        /* TV Design */
+        #viva-clock { position: absolute; top: 32px; left: 30px; z-index: 100; color: #fff; font-size: 22px; font-weight: bold; }
     </style>
 </head>
 <body>
 
+<div id="overlay" onclick="powerOn()">
+    <div class="viva-btn">VIVA STARTEN</div>
+    <p style="margin-top:25px; font-family:sans-serif; letter-spacing:2px;">Klicke zum Initialisieren</p>
+</div>
+
 <div id="status-box">Bereit...</div>
-<div id="overlay" onclick="powerOn()"><h1>START PROGRAMM</h1></div>
+<div id="viva-clock">00:00</div>
 <div id="player-container"><div id="player"></div></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -24,20 +48,32 @@
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
     const singleIntermissionId = 'h07xiwYGLvs';
 
-    // Funktion zum (Neu-)Erstellen des Players
+    function onYouTubeIframeAPIReady() {
+        console.log("API Ready");
+        document.getElementById('status-box').innerText = "API GELADEN";
+    }
+
     function createPlayer(videoId, isPlaylist = false) {
-        if (player) {
-            player.destroy(); // Löscht den alten Player komplett
-        }
+        document.getElementById('status-box').innerText = "INITIALISIERE PLAYER...";
         
+        // Falls schon ein Player existiert, zerstören wir ihn sauber
+        if (player && player.destroy) {
+            player.destroy();
+        }
+
         const playerVars = {
-            autoplay: 1, controls: 0, modestbranding: 1, rel: 0, playsinline: 1, enablejsapi: 1
+            autoplay: 1, 
+            controls: 0, 
+            modestbranding: 1, 
+            rel: 0, 
+            playsinline: 1, 
+            enablejsapi: 1,
+            origin: window.location.origin
         };
 
         if (isPlaylist) {
             playerVars.listType = 'playlist';
             playerVars.list = videoId;
-            playerVars.index = Math.floor(Math.random() * 50);
         }
 
         player = new YT.Player('player', {
@@ -45,8 +81,17 @@
             videoId: isPlaylist ? null : videoId,
             playerVars: playerVars,
             events: {
-                'onStateChange': onPlayerStateChange,
-                'onReady': (e) => e.target.unMute()
+                'onReady': (e) => {
+                    e.target.unMute();
+                    if (isPlaylist) {
+                        e.target.setShuffle(true);
+                        e.target.playVideoAt(Math.floor(Math.random() * 50));
+                    } else {
+                        e.target.playVideo();
+                    }
+                    document.getElementById('status-box').innerText = "PLAYER READY (" + mode + ")";
+                },
+                'onStateChange': onPlayerStateChange
             }
         });
     }
@@ -56,6 +101,7 @@
             mode = 'MUSIC';
             createPlayer(musicPlaylistId, true);
         }
+        
         if (event.data === YT.PlayerState.PLAYING) {
             startWatchdog();
         }
@@ -64,16 +110,19 @@
     function startWatchdog() {
         clearInterval(watchdog);
         watchdog = setInterval(() => {
-            if (mode === 'MUSIC' && player.getDuration) {
-                const timeLeft = player.getDuration() - player.getCurrentTime();
-                document.getElementById('status-box').innerText = "RESTZEIT: " + Math.round(timeLeft) + "s";
-                
-                // Wir nehmen 25 Sekunden, um dem neuen Player Zeit zum Initialisieren zu geben
-                if (timeLeft <= 25 && timeLeft > 0) {
-                    clearInterval(watchdog);
-                    mode = 'INTERMISSION';
-                    document.getElementById('status-box').innerText = "HARD RESET ZUM EINSPIELER...";
-                    createPlayer(singleIntermissionId, false);
+            if (mode === 'MUSIC' && player && player.getDuration) {
+                const duration = player.getDuration();
+                const currentTime = player.getCurrentTime();
+                if (duration > 0) {
+                    const timeLeft = duration - currentTime;
+                    document.getElementById('status-box').innerText = "RESTZEIT: " + Math.round(timeLeft) + "s";
+                    
+                    // Wir testen 25 Sekunden für den Hard-Reset
+                    if (timeLeft <= 25 && timeLeft > 0) {
+                        clearInterval(watchdog);
+                        mode = 'INTERMISSION';
+                        createPlayer(singleIntermissionId, false);
+                    }
                 }
             }
         }, 1000);
@@ -83,6 +132,12 @@
         document.getElementById('overlay').style.display = 'none';
         createPlayer(musicPlaylistId, true);
     }
+
+    setInterval(() => {
+        const n = new Date();
+        document.getElementById('viva-clock').innerText = 
+            n.getHours().toString().padStart(2, '0') + ":" + n.getMinutes().toString().padStart(2, '0');
+    }, 1000);
 </script>
 </body>
 </html>
