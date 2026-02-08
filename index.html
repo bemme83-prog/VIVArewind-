@@ -6,7 +6,7 @@
     <title>VIVA REWIND LIVE</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; -webkit-tap-highlight-color: transparent; }
         
         #screen { position: relative; width: 100%; height: 100dvh; overflow: hidden; background: #000; }
 
@@ -15,41 +15,43 @@
         .v-block { width: 18px; height: 28px; background: #fff; display: flex; align-items: center; justify-content: center; color: #000; font-size: 16px; font-weight: 900; }
         #viva-clock { position: absolute; top: 27px; left: 25px; z-index: 100; color: #fff; font-size: 20px; font-weight: bold; opacity: 0.8; text-shadow: 2px 2px 4px #000; }
 
-        /* Player - CRT Scale */
+        /* Player - Höherer Scale für Mobile */
         #player-wrapper { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
-        #player { width: 100%; height: 100%; transform: scale(1.45); }
+        #player { width: 100%; height: 100%; transform: scale(1.6); }
 
-        /* Dynamische Bauchbinde */
+        /* Bauchbinde */
         #tag {
             position: absolute; bottom: 25%; left: 0; z-index: 200;
             background: linear-gradient(90deg, var(--viva-cyan), var(--viva-pink));
             color: white; padding: 12px 35px; box-shadow: 8px 8px 0px #000;
             transform: translateX(-105%); transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-            max-width: 80%;
+            max-width: 85%;
         }
         #tag.show { transform: translateX(0); }
 
         /* Steuerung */
         #controls { position: absolute; bottom: 80px; width: 100%; z-index: 300; display: flex; justify-content: center; }
         .zap-btn { 
-            background: rgba(0,0,0,0.6); border: 2px solid #fff; color: #fff; 
-            padding: 15px 40px; font-weight: bold; border-radius: 50px; 
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-            text-transform: uppercase; letter-spacing: 1px;
+            background: rgba(0,0,0,0.7); border: 2px solid #fff; color: #fff; 
+            padding: 18px 40px; font-weight: bold; border-radius: 50px; 
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            text-transform: uppercase; font-size: 14px;
         }
 
-        /* Power-On */
+        /* Power-On Overlay */
         #overlay {
-            position: fixed; inset: 0; background: #111; z-index: 1000; 
+            position: fixed; inset: 0; background: #000; z-index: 1000; 
             display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer;
         }
+        #status { color: #555; font-size: 10px; margin-top: 15px; letter-spacing: 2px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
 <div id="overlay" onclick="powerOn()">
-    <div style="font-size: 55px; font-weight: 900; color: var(--viva-pink); border: 10px solid var(--viva-pink); padding: 20px 40px;">VIVA</div>
-    <p style="color: #fff; margin-top: 25px; letter-spacing: 5px; font-size: 14px;">ZUM EINSCHALTEN TIPPEN</p>
+    <div style="font-size: 55px; font-weight: 900; color: var(--viva-pink); border: 10px solid var(--viva-pink); padding: 15px 35px;">VIVA</div>
+    <p id="start-text" style="color: #fff; margin-top: 25px; letter-spacing: 5px; font-size: 14px;">TIPPEN ZUM STARTEN</p>
+    <div id="status">Lade VIVA-Netzwerk...</div>
 </div>
 
 <div id="screen">
@@ -61,16 +63,95 @@
     <div id="player-wrapper"><div id="player"></div></div>
     
     <div id="tag">
-        <div style="font-size: 11px; opacity: 0.8; margin-bottom: 2px;">VIVA REWIND:</div>
-        <div id="video-title" style="font-size: 18px; line-height: 1.2;">LADE TITEL...</div>
+        <div style="font-size: 10px; opacity: 0.8; margin-bottom: 2px;">VIVA REWIND:</div>
+        <div id="video-title" style="font-size: 18px; line-height: 1.1;">...</div>
     </div>
 
     <div id="controls">
-        <button class="zap-btn" onclick="zap()">NÄCHSTER CLIP (ZAPPEN)</button>
+        <button class="zap-btn" onclick="zap()">ZAPPEN</button>
     </div>
 </div>
 
 <script>
     let player;
-    const playlistId = 'PLfYJatUfKgnlRa5IM0KI_
-    
+    let apiReady = false;
+    const playlistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
+
+    // Uhrzeit
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('viva-clock').innerText = 
+            now.getHours().toString().padStart(2, '0') + ":" + 
+            now.getMinutes().toString().padStart(2, '0');
+    }
+    setInterval(updateClock, 1000); updateClock();
+
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('player', {
+            height: '100%',
+            width: '100%',
+            playerVars: {
+                listType: 'playlist',
+                list: playlistId,
+                autoplay: 0,
+                controls: 0,
+                modestbranding: 1,
+                rel: 0,
+                playsinline: 1,
+                iv_load_policy: 3,
+                enablejsapi: 1
+            },
+            events: {
+                'onReady': () => { 
+                    apiReady = true; 
+                    document.getElementById('status').innerText = "VIVA BEREIT";
+                    document.getElementById('status').style.color = "#00ffff";
+                },
+                'onStateChange': onPlayerStateChange,
+                'onError': () => zap()
+            }
+        });
+    }
+
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            const videoData = player.getVideoData();
+            if(videoData) {
+                let cleanTitle = videoData.title.split(' (')[0].split(' [')[0];
+                document.getElementById('video-title').innerText = cleanTitle;
+                
+                const tag = document.getElementById('tag');
+                tag.classList.remove('show');
+                setTimeout(() => tag.classList.add('show'), 1000);
+                setTimeout(() => tag.classList.remove('show'), 9000);
+            }
+        }
+        if (event.data === YT.PlayerState.ENDED) zap();
+    }
+
+    function powerOn() {
+        if(!apiReady) {
+            document.getElementById('status').innerText = "BITTE WARTEN...";
+            return;
+        }
+        
+        document.getElementById('overlay').style.display = 'none';
+        
+        // Erstes Video starten
+        player.unMute();
+        player.setVolume(100);
+        player.setShuffle(true);
+        
+        // Trick für Playlist-Start: Kurze Verzögerung beim ersten "Zap"
+        setTimeout(() => {
+            player.playVideoAt(Math.floor(Math.random() * 50)); 
+        }, 300);
+    }
+
+    function zap() {
+        player.nextVideo();
+    }
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>
