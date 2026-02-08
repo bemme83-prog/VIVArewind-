@@ -2,70 +2,61 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVA REWIND - DUAL PLAYER PRELOAD</title>
+    <title>VIVA REWIND - WARM START</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
-        
-        /* Beide Player liegen übereinander */
-        .player-container { position: absolute; inset: 0; transition: opacity 0.8s; background: #000; }
-        #container-music { z-index: 10; opacity: 1; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
+        .player-container { position: absolute; inset: 0; transition: opacity 0.5s; background: #000; }
+        #container-music { z-index: 10; }
         #container-inter { z-index: 5; opacity: 0; }
-        
         .active { opacity: 1 !important; z-index: 20 !important; }
-        .hidden { opacity: 0 !important; z-index: 5 !important; }
-
+        #status-box { position: absolute; top: 20px; right: 20px; z-index: 2000; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; }
         #overlay { position: fixed; inset: 0; z-index: 9999; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; }
-        #status-box { position: absolute; top: 80px; left: 30px; z-index: 2000; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; font-family: monospace; border: 1px solid #0f0; }
     </style>
 </head>
 <body>
 
-<div id="status-box">Dual-System Standby</div>
-<div id="overlay" onclick="powerOn()"><h1>START DUAL-STREAM</h1></div>
+<div id="status-box">Dual-System: Ready</div>
+<div id="overlay" onclick="powerOn()"><h1>START PROGRAMM</h1></div>
 
-<div id="container-music" class="player-container">
-    <div id="player-music"></div>
-</div>
-
-<div id="container-inter" class="player-container">
-    <div id="player-inter"></div>
-</div>
+<div id="container-music" class="player-container"><div id="player-music"></div></div>
+<div id="container-inter" class="player-container"><div id="player-inter"></div></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
     let playerMusic, playerInter;
     let watchdog;
     let isPreloading = false;
+    let isReadyToZap = false;
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
     const singleIntermissionId = 'h07xiwYGLvs';
 
     function onYouTubeIframeAPIReady() {
-        // Initialisiere Musik-Player
         playerMusic = new YT.Player('player-music', {
             height: '100%', width: '100%',
-            playerVars: { autoplay: 1, controls: 0, enablejsapi: 1 },
+            playerVars: { autoplay: 1, controls: 0, enablejsapi: 1, iv_load_policy: 3 },
             events: { 'onStateChange': onMusicStateChange }
         });
 
-        // Initialisiere Einspieler-Player (vorerst leer/stumm)
         playerInter = new YT.Player('player-inter', {
             height: '100%', width: '100%',
-            playerVars: { autoplay: 0, controls: 0, enablejsapi: 1 },
+            playerVars: { autoplay: 0, controls: 0, enablejsapi: 1, iv_load_policy: 3 },
             events: { 'onStateChange': onInterStateChange }
         });
     }
 
     function onMusicStateChange(event) {
-        if (event.data === YT.PlayerState.PLAYING) {
-            startWatchdog();
-        }
+        if (event.data === YT.PlayerState.PLAYING) startWatchdog();
     }
 
     function onInterStateChange(event) {
-        // Wenn der Einspieler zu Ende ist, zappen wir sofort zurück zur Musik
-        if (event.data === YT.PlayerState.ENDED) {
-            switchToMusic();
+        // Warm-up Logik: Sobald er im Hintergrund spielt, pausieren wir ihn sofort
+        if (isPreloading && event.data === YT.PlayerState.PLAYING) {
+            playerInter.pauseVideo();
+            isPreloading = false;
+            isReadyToZap = true;
+            document.getElementById('status-box').innerText = "EINSPIELER GEPUFFERT & BEREIT";
         }
+        if (event.data === YT.PlayerState.ENDED) switchToMusic();
     }
 
     function startWatchdog() {
@@ -73,45 +64,43 @@
         watchdog = setInterval(() => {
             if (playerMusic && playerMusic.getDuration) {
                 const timeLeft = playerMusic.getDuration() - playerMusic.getCurrentTime();
-                document.getElementById('status-box').innerText = "MUSIK LÄUFT - REST: " + Math.round(timeLeft) + "s";
-
-                // Schritt 1: PRELOAD bei 40 Sekunden
-                if (timeLeft <= 40 && !isPreloading) {
+                
+                // 1. Preload & Warm-up bei 45 Sekunden
+                if (timeLeft <= 45 && !isPreloading && !isReadyToZap) {
                     isPreloading = true;
-                    document.getElementById('status-box').innerText = "PRELOADING EINSPIELER...";
+                    document.getElementById('status-box').innerText = "WARMING UP EINSPIELER...";
+                    playerInter.mute();
                     playerInter.loadVideoById(singleIntermissionId);
-                    playerInter.mute(); // Im Hintergrund stumm laden
                 }
 
-                // Schritt 2: WECHSEL bei 15 Sekunden (wenn Einspieler gepuffert ist)
+                // 2. Der eigentliche Wechsel bei 15 Sekunden
                 if (timeLeft <= 15) {
                     clearInterval(watchdog);
                     switchToIntermission();
+                }
+
+                if (!isPreloading) {
+                    document.getElementById('status-box').innerText = "MUSIK: " + Math.round(timeLeft) + "s bis Zap";
                 }
             }
         }, 1000);
     }
 
     function switchToIntermission() {
-        document.getElementById('status-box').innerText = "SWITCH: EINSPIELER AKTIV";
-        
-        // Sichtbarkeit tauschen
-        document.getElementById('container-music').className = 'player-container hidden';
-        document.getElementById('container-inter').className = 'player-container active';
+        document.getElementById('container-music').style.opacity = "0";
+        document.getElementById('container-inter').classList.add('active');
         
         playerInter.unMute();
         playerInter.playVideo();
         
-        // Musik stoppen
-        playerMusic.stopVideo();
+        // Kleiner Delay für den Stop der Musik, damit der Übergang cleaner ist
+        setTimeout(() => playerMusic.stopVideo(), 500);
     }
 
     function switchToMusic() {
-        isPreloading = false;
-        document.getElementById('status-box').innerText = "SWITCH: ZURÜCK ZU MUSIK";
-        
-        document.getElementById('container-inter').className = 'player-container hidden';
-        document.getElementById('container-music').className = 'player-container active';
+        isReadyToZap = false;
+        document.getElementById('container-inter').classList.remove('active');
+        document.getElementById('container-music').style.opacity = "1";
         
         playerMusic.loadPlaylist({
             list: musicPlaylistId,
