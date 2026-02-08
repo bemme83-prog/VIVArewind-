@@ -2,20 +2,20 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVArewind - 90s TV Live</title>
+    <title>VIVArewind - Live</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
         #player-container { position: relative; width: 100vw; height: 100vh; background: #000; }
         #player { width: 100%; height: 100%; filter: contrast(1.1) saturate(1.2); pointer-events: none; }
         
-        /* CRT & Scanline Overlay */
+        /* CRT Effect */
         #player-container::after {
             content: " "; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
             background-size: 100% 3px, 3px 100%; z-index: 5; pointer-events: none;
         }
 
-        #viva-logo { position: absolute; top: 40px; right: 50px; width: 100px; z-index: 10; opacity: 0.7; animation: flicker 5s infinite; }
+        #viva-logo { position: absolute; top: 40px; right: 50px; width: 100px; z-index: 10; opacity: 0.7; }
         
         #song-info {
             position: absolute; bottom: 10%; left: 5%; background: linear-gradient(90deg, #ff00ff, #00ffff);
@@ -23,10 +23,23 @@
             box-shadow: 8px 8px 0px #000; z-index: 20; display: none;
         }
 
-        @keyframes flicker { 0% { opacity: 0.6; } 5% { opacity: 0.8; } 10% { opacity: 0.55; } 100% { opacity: 0.6; } }
+        /* START BUTTON OVERLAY */
+        #start-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 100; display: flex;
+            justify-content: center; align-items: center; cursor: pointer; color: white;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
+
+<div id="start-overlay" onclick="startTV()">
+    <div>
+        <h1 style="font-size: 48px; color: #ff00ff;">VIVA REWIND</h1>
+        <p>KLICKEN ZUM EINSCHALTEN</p>
+    </div>
+</div>
 
 <div id="player-container">
     <div id="player"></div>
@@ -38,7 +51,6 @@
 </div>
 
 <script>
-    // DEINE DATENBANK (Hier IDs einfügen oder musicVideos.json laden)
     const musicVideos = [
         { id: '98WtmW-lfeE', artist: 'Lucilectric', title: 'Mädchen' },
         { id: 'mD2M0I9Cip4', artist: 'Die Fantastischen Vier', title: 'Die Da' },
@@ -51,9 +63,15 @@
     let songCounter = 0;
     let player;
 
-    function shuffle(array) {
-        return array.sort(() => Math.random() - 0.5);
+    function startTV() {
+        document.getElementById('start-overlay').style.display = 'none';
+        if (player) {
+            player.unMute();
+            player.playVideo();
+        }
     }
+
+    function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
 
     function playNext() {
         let next;
@@ -69,11 +87,17 @@
         if (!player) {
             player = new YT.Player('player', {
                 videoId: next.id,
-                playerVars: { 'autoplay': 1, 'controls': 0, 'rel': 0, 'modestbranding': 1, 'iv_load_policy': 3 },
+                playerVars: { 
+                    'autoplay': 1, 
+                    'controls': 0, 
+                    'rel': 0, 
+                    'modestbranding': 1, 
+                    'mute': 1 // STARTET STUMM FÜR AUTOPLAY
+                },
                 events: {
                     'onReady': (e) => e.target.playVideo(),
                     'onStateChange': (e) => { if (e.data === YT.PlayerState.ENDED) playNext(); },
-                    'onError': () => { console.log("Fehler, überspringe..."); playNext(); }
+                    'onError': () => playNext()
                 }
             });
         } else {
@@ -84,7 +108,8 @@
             document.getElementById('track-artist').innerText = next.artist;
             document.getElementById('track-title').innerText = next.title;
             const info = document.getElementById('song-info');
-            setTimeout(() => { info.style.display = 'block'; setTimeout(() => info.style.display = 'none', 6000); }, 2000);
+            info.style.display = 'block';
+            setTimeout(() => info.style.display = 'none', 7000);
         }
     }
 
