@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VIVA REWIND - ID-INJECTION MODE</title>
+    <title>VIVA ONLY TEST</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; --logo-blau: #1a4a9e; --logo-gelb: #ffff00; --start-gelb: #FFEA00; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
@@ -14,18 +14,14 @@
         .rewind-text { color: #fff; font-family: 'Arial', sans-serif; font-style: italic; font-size: 14px; font-weight: bold; margin-top: -2px; text-transform: lowercase; }
         #viva-clock { position: absolute; top: 32px; left: 30px; z-index: 100; color: #fff; font-size: 22px; font-weight: bold; }
         #player-wrapper { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
-        #player { width: 100%; height: 100%; pointer-events: none; }
-        #tag { position: absolute; bottom: 15%; left: 0; z-index: 200; background: linear-gradient(90deg, var(--viva-cyan), var(--viva-pink)); color: white; padding: 12px 35px; box-shadow: 8px 8px 0px #000; transform: translateX(-105%); transition: transform 0.6s; }
-        #tag.show { transform: translateX(0); }
-        #controls { position: absolute; bottom: 10%; width: 100%; z-index: 300; display: flex; justify-content: center; opacity: 0; transition: opacity 0.5s; }
-        .btn { background: rgba(0,0,0,0.7); border: 2px solid #fff; color: #fff; padding: 18px 30px; font-weight: bold; border-radius: 50px; cursor: pointer; }
+        #player { width: 100%; height: 100%; }
         #overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
         #start-text { color: var(--start-gelb); font-size: 40px; font-weight: 900; animation: pulse 1.5s infinite alternate; }
         #version-stamp { position: absolute; bottom: 20px; color: rgba(255,255,255,0.4); font-size: 12px; }
         @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
     </style>
 </head>
-<body onmousemove="showUI()" onclick="showUI()">
+<body onclick="showUI()">
 
 <div id="overlay" onclick="powerOn()">
     <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
@@ -35,8 +31,8 @@
         </div>
         <div class="rewind-text" style="font-size:24px;">rewind</div>
     </div>
-    <div id="start-text">START</div>
-    <div id="version-stamp">ID-INJECTION BUILD: 08.02.2026 - 12:35 CET</div>
+    <div id="start-text">TEST STARTEN</div>
+    <div id="version-stamp">VIVA-ONLY BUILD: 08.02.2026 - 12:45 CET</div>
 </div>
 
 <div id="screen">
@@ -49,101 +45,66 @@
         <div class="rewind-text">rewind</div>
     </div>
     <div id="player-wrapper"><div id="player"></div></div>
-    <div id="tag"><div id="video-title" style="font-size: 18px; text-transform: uppercase;">VIVA...</div></div>
-    <div id="controls"><button class="btn" onclick="zap()">ZAPPEN</button></div>
 </div>
 
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
     let player;
-    let currentMode = 'MUSIC'; 
-    
-    // Wir definieren die Video-IDs direkt, um die Playlist-Sperre zu umgehen
-    const musicVideos = ['PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2']; // Playlist ID
-    const intermissionVideos = ['PLQ7SWY9Xieg3hXzm58s84PRe53LttQbJl']; // Playlist ID
+    const testPlaylistId = 'PLQ7SWY9Xieg3hXzm58s84PRe53LttQbJl';
 
-    // YouTube API laden
-    var tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    var firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    function updateClock() {
+        const n = new Date();
+        document.getElementById('viva-clock').innerText = n.getHours().toString().padStart(2, '0') + ":" + n.getMinutes().toString().padStart(2, '0');
+    }
+    setInterval(updateClock, 1000); updateClock();
 
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('player', {
             height: '100%', width: '100%',
+            host: 'https://www.youtube-nocookie.com',
             playerVars: { 
-                'autoplay': 1, 'controls': 0, 'modestbranding': 1, 
-                'rel': 0, 'iv_load_policy:': 3, 'enablejsapi': 1 
+                autoplay: 1, 
+                controls: 0, 
+                modestbranding: 1, 
+                rel: 0, 
+                enablejsapi: 1 
             },
             events: {
                 'onReady': onPlayerReady,
                 'onStateChange': onPlayerStateChange,
-                'onError': onPlayerError
+                'onError': (e) => console.log("Fehler im Test: ", e.data)
             }
         });
     }
 
     function onPlayerReady(event) {
-        // Initialer Start
+        // Starte Playlist im Zufallsmodus
+        player.loadPlaylist({
+            list: testPlaylistId,
+            listType: 'playlist',
+            index: Math.floor(Math.random() * 10)
+        });
     }
 
     function onPlayerStateChange(event) {
-        if (event.data === YT.PlayerState.PLAYING) {
-            const data = player.getVideoData();
-            if(data && currentMode === 'MUSIC') {
-                document.getElementById('video-title').innerText = data.title;
-                document.getElementById('tag').classList.add('show');
-                setTimeout(() => document.getElementById('tag').classList.remove('show'), 6000);
-            }
-        }
-        
-        // Wenn Video endet -> Ping-Pong Wechsel
+        // Wenn ein Einspieler endet, lade den nächsten zufälligen Einspieler
         if (event.data === YT.PlayerState.ENDED) {
-            currentMode = (currentMode === 'MUSIC') ? 'INTERMISSION' : 'MUSIC';
-            loadPingPong();
+            player.loadPlaylist({
+                list: testPlaylistId,
+                listType: 'playlist',
+                index: Math.floor(Math.random() * 10)
+            });
         }
-    }
-
-    function onPlayerError() {
-        // Bei Fehler einfach nochmal versuchen (nächstes Zufallsvideo)
-        loadPingPong();
-    }
-
-    function loadPingPong() {
-        const targetList = (currentMode === 'MUSIC') ? musicVideos[0] : intermissionVideos[0];
-        const range = (currentMode === 'MUSIC') ? 100 : 20;
-        const randomPos = Math.floor(Math.random() * range);
-
-        console.log("Ping-Pong zu: " + currentMode);
-        
-        // Wir laden die Playlist, aber erzwingen den Start eines spezifischen Index
-        player.loadPlaylist({
-            list: targetList,
-            listType: 'playlist',
-            index: randomPos
-        });
     }
 
     function powerOn() {
         document.getElementById('overlay').style.display = 'none';
-        currentMode = 'MUSIC';
-        loadPingPong();
-    }
-
-    function zap() {
-        currentMode = 'MUSIC';
-        loadPingPong();
+        if(player) player.unMute();
     }
 
     function showUI() {
-        const c = document.getElementById('controls');
-        c.style.opacity = "1";
-        setTimeout(() => c.style.opacity = "0", 3000);
+        // UI Dummy
     }
-
-    setInterval(() => {
-        const n = new Date();
-        document.getElementById('viva-clock').innerText = n.getHours().toString().padStart(2, '0') + ":" + n.getMinutes().toString().padStart(2, '0');
-    }, 1000);
 </script>
 </body>
 </html>
