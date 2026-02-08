@@ -2,21 +2,22 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVA REWIND - AD-REDUCED</title>
+    <title>VIVA REWIND - PING PONG MODE</title>
     <style>
+        :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
-        .player-container { position: absolute; inset: 0; transition: opacity 0.4s; background: #000; }
+        .player-container { position: absolute; inset: 0; transition: opacity 0.5s; background: #000; }
         #container-music { z-index: 10; opacity: 1; }
         #container-inter { z-index: 5; opacity: 0; }
         .active { opacity: 1 !important; z-index: 20 !important; }
-        #status-box { position: absolute; top: 20px; right: 20px; z-index: 2000; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; }
+        #status-box { position: absolute; top: 20px; right: 20px; z-index: 2000; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; border: 1px solid #0f0; }
         #overlay { position: fixed; inset: 0; z-index: 9999; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; }
     </style>
 </head>
 <body>
 
-<div id="status-box">Ad-Reduced Mode</div>
-<div id="overlay" onclick="powerOn()"><h1>VIVA STARTEN</h1></div>
+<div id="status-box">Ping-Pong Standby</div>
+<div id="overlay" onclick="powerOn()"><h1>START PROGRAMM</h1></div>
 
 <div id="container-music" class="player-container"><div id="player-music"></div></div>
 <div id="container-inter" class="player-container"><div id="player-inter"></div></div>
@@ -25,51 +26,53 @@
 <script>
     let playerMusic, playerInter;
     let watchdog;
+    let musicReady = false;
+    let interReady = false;
     let isPreloading = false;
-    let isReadyToZap = false;
+    
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
-    const singleIntermissionId = 'h07xiwYGLvs';
+    const intermissions = ['h07xiwYGLvs', 'VId6Vv9S9M0', '8-nO87p97v8']; // Beispiel-Liste
 
     function onYouTubeIframeAPIReady() {
-        const commonVars = {
-            autoplay: 1,
-            controls: 0,
-            modestbranding: 1,
-            rel: 0,
-            iv_load_policy: 3,
-            enablejsapi: 1,
-            disablekb: 1,
-            showinfo: 0
-        };
+        const commonVars = { autoplay: 0, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3, enablejsapi: 1, host: 'https://www.youtube-nocookie.com' };
 
         playerMusic = new YT.Player('player-music', {
             height: '100%', width: '100%',
-            host: 'https://www.youtube-nocookie.com',
             playerVars: commonVars,
             events: { 'onStateChange': onMusicStateChange }
         });
 
         playerInter = new YT.Player('player-inter', {
             height: '100%', width: '100%',
-            host: 'https://www.youtube-nocookie.com',
             playerVars: commonVars,
             events: { 'onStateChange': onInterStateChange }
         });
     }
 
     function onMusicStateChange(event) {
-        if (event.data === YT.PlayerState.ENDED && isReadyToZap) switchToIntermission();
-        if (event.data === YT.PlayerState.PLAYING) startWatchdog();
+        // Musik läuft -> Watchdog starten
+        if (event.data === YT.PlayerState.PLAYING) {
+            musicReady = true;
+            startWatchdog();
+        }
+        // Musik zu Ende -> Wechsel zu Einspieler
+        if (event.data === YT.PlayerState.ENDED && interReady) {
+            switchToInter();
+        }
     }
 
     function onInterStateChange(event) {
-        if (isPreloading && event.data === YT.PlayerState.PLAYING) {
+        // Einspieler im Hintergrund "warm" gelaufen?
+        if (event.data === YT.PlayerState.PLAYING && isPreloading) {
             playerInter.pauseVideo();
             isPreloading = false;
-            isReadyToZap = true;
-            document.getElementById('status-box').innerText = "EINSPIELER READY (NO-COOKIE)";
+            interReady = true;
+            document.getElementById('status-box').innerText = "EINSPIELER GEPUFFERT";
         }
-        if (event.data === YT.PlayerState.ENDED) switchToMusic();
+        // Einspieler zu Ende -> Wechsel zu Musik
+        if (event.data === YT.PlayerState.ENDED) {
+            switchToMusic();
+        }
     }
 
     function startWatchdog() {
@@ -78,37 +81,53 @@
             if (playerMusic && playerMusic.getDuration) {
                 const timeLeft = playerMusic.getDuration() - playerMusic.getCurrentTime();
                 
-                if (timeLeft <= 40 && !isPreloading && !isReadyToZap) {
+                // Preload Einspieler bei 40s
+                if (timeLeft <= 40 && !interReady && !isPreloading) {
                     isPreloading = true;
+                    interReady = false;
+                    const nextInter = intermissions[Math.floor(Math.random() * intermissions.length)];
                     playerInter.mute();
-                    playerInter.loadVideoById(singleIntermissionId);
+                    playerInter.loadVideoById(nextInter);
                 }
 
-                if (timeLeft <= 1.5 && timeLeft > 0 && isReadyToZap) {
-                    clearInterval(watchdog);
-                    switchToIntermission();
+                // Hard-Switch bei 1s falls Event nicht feuert
+                if (timeLeft <= 1 && interReady) {
+                    switchToInter();
                 }
+                
+                document.getElementById('status-box').innerText = "MUSIK: " + Math.round(timeLeft) + "s";
             }
         }, 500);
     }
 
-    function switchToIntermission() {
+    function switchToInter() {
+        clearInterval(watchdog);
         document.getElementById('container-music').style.opacity = "0";
         document.getElementById('container-inter').classList.add('active');
+        
         playerInter.unMute();
         playerInter.playVideo();
-        setTimeout(() => playerMusic.stopVideo(), 500);
+        
+        // JETZT: Musik-Player im Hintergrund schonmal für das NÄCHSTE Video vorbereiten
+        setTimeout(() => {
+            musicReady = false;
+            playerMusic.mute();
+            playerMusic.loadPlaylist({
+                list: musicPlaylistId,
+                listType: 'playlist',
+                index: Math.floor(Math.random() * 50)
+            });
+            // Der Player wird durch autoplay:1 starten, wir pausieren ihn via onMusicStateChange (siehe unten)
+        }, 1000);
     }
 
     function switchToMusic() {
-        isReadyToZap = false;
+        interReady = false;
         document.getElementById('container-inter').classList.remove('active');
         document.getElementById('container-music').style.opacity = "1";
-        playerMusic.loadPlaylist({
-            list: musicPlaylistId,
-            listType: 'playlist',
-            index: Math.floor(Math.random() * 50)
-        });
+        
+        playerMusic.unMute();
+        playerMusic.playVideo();
     }
 
     function powerOn() {
