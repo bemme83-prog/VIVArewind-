@@ -2,22 +2,22 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVA REWIND - COMPATIBILITY</title>
+    <title>VIVA REWIND - 3S OFFSET</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
         .player-container { position: absolute; inset: 0; transition: opacity 0.5s; background: #000; pointer-events: none; }
-        #container-music { z-index: 10; }
+        #container-music { z-index: 10; opacity: 1; }
         #container-inter { z-index: 5; opacity: 0; }
         .active { opacity: 1 !important; z-index: 20 !important; }
-        #status-box { position: absolute; top: 20px; right: 20px; z-index: 2000; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; }
+        #status-box { position: absolute; top: 20px; right: 20px; z-index: 2000; background: rgba(0,0,0,0.8); color: #0f0; padding: 8px; font-family: monospace; font-size: 10px; border: 1px solid #0f0; }
         #overlay { position: fixed; inset: 0; z-index: 9999; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; }
     </style>
 </head>
 <body>
 
-<div id="status-box">Status: Stabilisierung...</div>
-<div id="overlay" onclick="powerOn()"><h1>START PROGRAMM</h1></div>
+<div id="status-box">OFFSET: 3s READY</div>
+<div id="overlay" onclick="powerOn()"><h1 style="color:#ffff00">START VIVA</h1></div>
 
 <div id="container-music" class="player-container"><div id="player-music"></div></div>
 <div id="container-inter" class="player-container"><div id="player-inter"></div></div>
@@ -27,95 +27,102 @@
     let playerMusic, playerInter;
     let watchdog;
     let mode = 'MUSIC';
-    let isSwitching = false;
+    let isPreloading = false;
+    let interReady = false;
     
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
-    const intermissions = ['h07xiwYGLvs', 'VId6Vv9S9M0', '8-nO87p97v8'];
+    const singleIntermissionId = 'h07xiwYGLvs';
 
     function onYouTubeIframeAPIReady() {
-        // Standard-Parameter ohne "aggressive" Werbeblocker-Befehle
-        const standardVars = {
-            autoplay: 0, 
-            controls: 0, 
-            rel: 0, 
-            enablejsapi: 1, 
-            iv_load_policy: 3,
-            origin: window.location.origin
-        };
+        const commonVars = { autoplay: 0, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3, enablejsapi: 1 };
 
         playerMusic = new YT.Player('player-music', {
             height: '100%', width: '100%',
-            playerVars: standardVars,
-            events: { 'onStateChange': (e) => handleState(e, 'MUSIC'), 'onReady': (e) => e.target.unMute() }
+            playerVars: commonVars,
+            events: { 
+                'onStateChange': (e) => {
+                    if (e.data === YT.PlayerState.PLAYING) startWatchdog();
+                    // Zusätzlicher Trigger: Falls Video komplett endet vor Watchdog
+                    if (e.data === YT.PlayerState.ENDED && mode === 'MUSIC') zapToInter();
+                }
+            }
         });
 
         playerInter = new YT.Player('player-inter', {
             height: '100%', width: '100%',
-            playerVars: standardVars,
-            events: { 'onStateChange': (e) => handleState(e, 'INTER'), 'onReady': (e) => e.target.unMute() }
+            playerVars: commonVars,
+            events: { 
+                'onStateChange': (e) => {
+                    if (e.data === YT.PlayerState.PLAYING && isPreloading) {
+                        playerInter.pauseVideo();
+                        isPreloading = false;
+                        interReady = true;
+                    }
+                    // Rücksprung zur Musik: Entweder 3s vorher (via Watchdog) oder bei Ende
+                    if (e.data === YT.PlayerState.ENDED && mode === 'INTER') zapToMusic();
+                }
+            }
         });
-    }
-
-    function handleState(event, playerType) {
-        if (playerType === 'MUSIC' && event.data === YT.PlayerState.ENDED && mode === 'MUSIC') doZapToInter();
-        if (playerType === 'INTER' && event.data === YT.PlayerState.ENDED && mode === 'INTER') doZapToMusic();
-
-        if (playerType === 'MUSIC' && event.data === YT.PlayerState.PLAYING) startWatchdog();
-
-        // Wenn der Einspieler im Hintergrund zu spielen beginnt (auch wenn es Werbung ist)
-        if (playerType === 'INTER' && event.data === YT.PlayerState.PLAYING && mode === 'MUSIC') {
-            document.getElementById('status-box').innerText = "HINTERGRUND: READY";
-        }
     }
 
     function startWatchdog() {
         clearInterval(watchdog);
         watchdog = setInterval(() => {
+            // LOGIK FÜR MUSIK -> EINSPIELER
             if (mode === 'MUSIC' && playerMusic.getDuration) {
                 const timeLeft = playerMusic.getDuration() - playerMusic.getCurrentTime();
                 
-                // Wir laden den Einspieler früher (60s), falls Werbung davor kommt
-                if (timeLeft <= 60 && timeLeft > 55) {
-                    if (playerInter.getPlayerState() !== 1) {
-                        playerInter.mute();
-                        playerInter.loadVideoById(intermissions[Math.floor(Math.random() * intermissions.length)]);
-                    }
+                if (timeLeft <= 45 && !interReady && !isPreloading) {
+                    isPreloading = true;
+                    playerInter.mute();
+                    playerInter.loadVideoById(singleIntermissionId);
                 }
 
-                if (timeLeft <= 1.5 && timeLeft > 0 && !isSwitching) doZapToInter();
-                document.getElementById('status-box').innerText = "MUSIC: " + Math.round(timeLeft) + "s";
+                // WECHSEL BEI 3 SEKUNDEN RESTZEIT
+                if (timeLeft <= 3.0 && timeLeft > 0 && interReady) {
+                    zapToInter();
+                }
+                document.getElementById('status-box').innerText = "MUSIC -> INTER IN: " + Math.max(0, Math.round(timeLeft - 3)) + "s";
             }
-        }, 1000);
+
+            // LOGIK FÜR EINSPIELER -> MUSIK
+            if (mode === 'INTER' && playerInter.getDuration) {
+                const timeLeft = playerInter.getDuration() - playerInter.getCurrentTime();
+                
+                // WECHSEL BEI 3 SEKUNDEN VOR ENDE DES EINSPIELERS
+                if (timeLeft <= 3.0 && timeLeft > 0) {
+                    zapToMusic();
+                }
+                document.getElementById('status-box').innerText = "INTER -> MUSIC IN: " + Math.max(0, Math.round(timeLeft - 3)) + "s";
+            }
+        }, 500);
     }
 
-    function doZapToInter() {
-        if (isSwitching) return;
-        isSwitching = true;
+    function zapToInter() {
+        if (mode === 'INTER') return;
         mode = 'INTER';
-        
         document.getElementById('container-music').style.opacity = "0";
         document.getElementById('container-inter').classList.add('active');
-        
         playerInter.unMute();
         playerInter.playVideo();
-        
-        // Playlist für nächstes Video laden
-        setTimeout(() => {
-            playerMusic.mute();
-            playerMusic.loadPlaylist({ list: musicPlaylistId, listType: 'playlist', index: Math.floor(Math.random() * 50) });
-            isSwitching = false;
-        }, 2000);
+        // Musik hart stoppen
+        setTimeout(() => playerMusic.stopVideo(), 500);
     }
 
-    function doZapToMusic() {
-        if (isSwitching) return;
-        isSwitching = true;
+    function zapToMusic() {
+        if (mode === 'MUSIC') return;
         mode = 'MUSIC';
+        interReady = false;
         document.getElementById('container-inter').classList.remove('active');
         document.getElementById('container-music').style.opacity = "1";
-        playerMusic.unMute();
-        playerMusic.playVideo();
-        setTimeout(() => { isSwitching = false; }, 2000);
+        
+        playerMusic.loadPlaylist({
+            list: musicPlaylistId,
+            listType: 'playlist',
+            index: Math.floor(Math.random() * 50)
+        });
+        // Einspieler stoppen
+        setTimeout(() => playerInter.stopVideo(), 500);
     }
 
     function powerOn() {
