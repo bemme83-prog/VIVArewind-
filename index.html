@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVA REWIND - ULTIMATE POP EDITION</title>
+    <title>VIVA REWIND - FINISHED DESIGN</title>
     <style>
         :root { 
             --viva-blue: #1a4a9e; 
@@ -12,40 +12,40 @@
         }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; color: #fff; }
         
-        /* Hintergrund & Player */
         .player-container { position: absolute; inset: 0; transition: opacity 0.6s; background: #000; pointer-events: none; }
         #container-music { z-index: 10; }
         #container-inter { z-index: 5; }
         .active { opacity: 1 !important; z-index: 20 !important; }
 
-        /* Startbildschirm: Radialer Verlauf passend zum Logo */
+        /* Startbildschirm */
         #overlay { 
             position: fixed; inset: 0; z-index: 9999; 
             background: radial-gradient(circle, #fff 0%, var(--viva-blue) 40%, var(--viva-dark) 100%);
             display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; 
         }
-        .blink { animation: blinker 0.8s linear infinite; font-size: 60px; color: var(--viva-yellow); -webkit-text-stroke: 3px var(--viva-blue); margin-top: 30px; text-shadow: 5px 5px 0px var(--viva-pink); }
+        .start-logo-wrap { transform: scale(1.8); } /* Logo auf Startseite deutlich größer */
+        .blink { animation: blinker 0.8s linear infinite; font-size: 60px; color: var(--viva-yellow); -webkit-text-stroke: 3px var(--viva-blue); margin-top: 60px; text-shadow: 5px 5px 0px var(--viva-pink); }
         @keyframes blinker { 50% { opacity: 0; } }
 
-        /* --- DAS PERFEKTE LOGO --- */
+        /* --- LOGO GEOMETRIE (Dicht gedrängt) --- */
         .logo-box { display: flex; flex-direction: column; align-items: center; }
-        .logo-row { display: flex; gap: 2px; align-items: center; justify-content: center; }
-        .triangle-svg { width: 55px; height: 50px; }
-        .t-shape { stroke-width: 10; stroke-linejoin: round; stroke-linecap: round; fill: none; }
+        .logo-row { display: flex; align-items: center; justify-content: center; margin-left: 15px; } /* Ausgleich für Versatz */
+        .triangle-svg { width: 55px; height: 50px; margin-left: -12px; } /* Negativer Margin für "Berührung" */
+        .t-shape { stroke-width: 12; stroke-linejoin: round; stroke-linecap: round; fill: none; }
         .t-blue { stroke: var(--viva-blue); }
         .t-yellow-filled { stroke: var(--viva-yellow); fill: var(--viva-yellow); }
-        .rewind-text { font-style: italic; font-size: 28px; color: var(--viva-blue); margin-top: -5px; font-weight: normal; letter-spacing: -1px; }
+        .rewind-text { font-style: italic; font-size: 28px; color: var(--viva-yellow); margin-top: -5px; font-weight: normal; letter-spacing: -1px; text-shadow: 2px 2px 0px var(--viva-blue); }
 
-        #viva-header { position: absolute; top: 40px; right: 40px; z-index: 100; transform: scale(0.8); }
+        #viva-header { position: absolute; top: 40px; right: 40px; z-index: 100; transition: transform 0.3s; }
 
-        /* Uhrzeit oben links - Stylisch */
+        /* Uhrzeit */
         #viva-clock { 
             position: absolute; top: 30px; left: 30px; z-index: 100; 
             font-size: 42px; color: var(--viva-yellow); 
-            text-shadow: 4px 4px 0px var(--viva-blue), 6px 6px 0px var(--viva-pink); 
+            text-shadow: 4px 4px 0px var(--viva-blue); 
         }
         
-        /* Popiger Info-Tag (Gelb/Blau/Fett) */
+        /* Info-Tag */
         #tag { 
             position: absolute; bottom: 22%; left: 0; z-index: 200; 
             background: var(--viva-yellow); color: var(--viva-blue); 
@@ -56,7 +56,7 @@
         #tag.show { transform: translateX(0); }
         #video-title { font-size: 32px; font-weight: 900; text-transform: uppercase; line-height: 1; }
 
-        /* Steuerung Unten Mittig */
+        /* Steuerung */
         .viva-controls { 
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
             z-index: 1000; display: flex; gap: 15px; 
@@ -67,23 +67,33 @@
             background: var(--viva-blue); border: 4px solid var(--viva-yellow); 
             color: var(--viva-yellow); padding: 12px 30px; cursor: pointer; 
             font-family: 'Arial Black'; font-size: 14px; text-transform: uppercase;
-            box-shadow: 6px 6px 0px #000; transition: 0.2s;
+            box-shadow: 6px 6px 0px #000;
         }
-        .control-btn:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0px var(--viva-pink); }
         .btn-skip { background: var(--viva-pink); border-color: #fff; color: #fff; }
+
+        /* --- FULLSCREEN SKALIERUNG (Wichtig!) --- */
+        @media (min-height: 1000px) {
+            #viva-header { transform: scale(0.7); top: 20px; right: 20px; }
+            #viva-clock { font-size: 28px; top: 20px; left: 20px; }
+            #tag { padding: 15px 40px; border-width: 5px; bottom: 15%; }
+            #video-title { font-size: 22px; }
+            .control-btn { padding: 8px 20px; font-size: 11px; }
+        }
     </style>
 </head>
 <body>
 
 <div id="overlay" onclick="powerOn()">
-    <div class="logo-box">
-        <div class="logo-row">
-            <svg class="triangle-svg" viewBox="0 0 100 100"><path class="t-shape t-blue" d="M15,25 L85,25 L50,85 Z"/></svg>
-            <svg class="triangle-svg" viewBox="0 0 100 100"><path class="t-shape t-yellow-filled" d="M15,75 L85,75 L50,15 Z"/></svg>
-            <svg class="triangle-svg" viewBox="0 0 100 100"><path class="t-shape t-blue" d="M15,25 L85,25 L50,85 Z"/></svg>
-            <svg class="triangle-svg" viewBox="0 0 100 100"><path class="t-shape t-blue" d="M15,75 L85,75 L50,15 Z"/></svg>
+    <div class="start-logo-wrap">
+        <div class="logo-box">
+            <div class="logo-row">
+                <svg class="triangle-svg" viewBox="0 0 100 100"><path class="t-shape t-blue" d="M15,25 L85,25 L50,85 Z"/></svg>
+                <svg class="triangle-svg" viewBox="0 0 100 100"><path class="t-shape t-yellow-filled" d="M15,75 L85,75 L50,15 Z"/></svg>
+                <svg class="triangle-svg" viewBox="0 0 100 100"><path class="t-shape t-blue" d="M15,25 L85,25 L50,85 Z"/></svg>
+                <svg class="triangle-svg" viewBox="0 0 100 100"><path class="t-shape t-blue" d="M15,75 L85,75 L50,15 Z"/></svg>
+            </div>
+            <div class="rewind-text" style="font-size: 55px;">rewind</div>
         </div>
-        <div class="rewind-text" style="font-size: 50px; color: #fff; text-shadow: 3px 3px var(--viva-blue);">rewind</div>
     </div>
     <div class="blink">START!</div>
 </div>
@@ -102,7 +112,7 @@
     </div>
 </div>
 
-<div id="tag"><div id="video-title">LOADING...</div></div>
+<div id="tag"><div id="video-title">VIVA REWIND...</div></div>
 
 <div class="viva-controls" id="ui-controls">
     <button class="control-btn" onclick="zapToMusic()">ZAPP</button>
@@ -210,5 +220,4 @@
     }
 </script>
 </body>
-    </html>
-    
+</html>
