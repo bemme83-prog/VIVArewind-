@@ -3,22 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VIVA REWIND - TIMESTAMP EDITION</title>
+    <title>VIVA REWIND - BUILD 17:15</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; --logo-blau: #1a4a9e; --logo-gelb: #ffff00; --start-gelb: #FFEA00; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
         
-        /* Startbildschirm Design */
+        /* Startbildschirm */
         #overlay { 
             position: fixed; inset: 0; background: #000; z-index: 1000; 
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            cursor: pointer; text-align: center;
+            cursor: pointer; 
         }
-        #startup-clock { color: #fff; font-size: 80px; font-weight: 900; margin: 20px 0; letter-spacing: -2px; }
-        #startup-date { color: var(--viva-cyan); font-size: 20px; margin-bottom: 40px; text-transform: uppercase; letter-spacing: 4px; }
-        #start-prompt { color: var(--start-gelb); font-size: 24px; animation: pulse 1.5s infinite alternate; }
+        #start-text { color: var(--start-gelb); font-size: 40px; font-weight: 900; animation: pulse 1.5s infinite alternate; }
         
-        /* Das restliche Interface */
+        /* DEIN ZEITSTEMPEL FÜR DIE KONTROLLE */
+        #build-stamp { 
+            position: absolute; bottom: 20px; right: 20px; 
+            color: rgba(255,255,255,0.4); font-family: sans-serif; font-size: 12px; 
+            letter-spacing: 1px;
+        }
+
+        /* TV Interface */
         #screen { position: relative; width: 100%; height: 100dvh; background: #000; }
         #viva-container-corner { position: absolute; top: 30px; right: 30px; z-index: 100; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none; }
         .logo-svg { width: 35px; height: 35px; fill: none; stroke-width: 10; stroke-linejoin: round; }
@@ -30,19 +35,18 @@
         #tag { position: absolute; bottom: 18%; left: 0; z-index: 200; background: linear-gradient(90deg, var(--viva-cyan), var(--viva-pink)); color: white; padding: 12px 35px; box-shadow: 8px 8px 0px #000; transform: translateX(-105%); transition: transform 0.6s; }
         #tag.show { transform: translateX(0); }
 
-        @keyframes pulse { from { opacity: 1; transform: scale(1); } to { opacity: 0.6; transform: scale(0.95); } }
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
     </style>
 </head>
 <body>
 
 <div id="overlay" onclick="powerOn()">
-    <div style="display: flex; margin-bottom: 30px;">
-        <svg class="logo-svg blau" style="width:50px; height:50px; stroke-width:15;" viewBox="0 0 100 100"><path d="M15,25 L85,25 L50,85 Z"/></svg> 
-        <svg class="logo-svg gelb" style="width:50px; height:50px; stroke-width:15; margin-left:-12px;" viewBox="0 0 100 100"><path d="M15,75 L85,75 L50,15 Z"/></svg> 
+    <div style="display: flex; margin-bottom: 20px;">
+        <svg class="logo-svg blau" style="width:60px; height:60px; stroke-width:15;" viewBox="0 0 100 100"><path d="M15,25 L85,25 L50,85 Z"/></svg> 
+        <svg class="logo-svg gelb" style="width:60px; height:60px; stroke-width:15; margin-left:-15px;" viewBox="0 0 100 100"><path d="M15,75 L85,75 L50,15 Z"/></svg> 
     </div>
-    <div id="startup-date">SONNTAG, 08. FEBRUAR 2026</div>
-    <div id="startup-clock">00:00:00</div>
-    <div id="start-prompt">ZUM STARTEN KLICKEN</div>
+    <div id="start-text">START</div>
+    <div id="build-stamp">VERSION: 08.02.2026 - 17:15 CET</div>
 </div>
 
 <div id="screen">
@@ -66,18 +70,6 @@
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
     const intermissionPlaylistId = 'PLQ7SWY9Xieg3hXzm58s84PRe53LttQbJl';
 
-    function updateClocks() {
-        const now = new Date();
-        const h = now.getHours().toString().padStart(2, '0');
-        const m = now.getMinutes().toString().padStart(2, '0');
-        const s = now.getSeconds().toString().padStart(2, '0');
-        
-        // Uhrzeit auf Startbildschirm (mit Sekunden)
-        document.getElementById('startup-clock').innerText = h + ":" + m + ":" + s;
-        // Uhrzeit im TV-Eck (ohne Sekunden)
-        document.getElementById('viva-clock').innerText = h + ":" + m;
-    }
-
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('player', {
             height: '100%', width: '100%',
@@ -89,36 +81,57 @@
 
     function onPlayerStateChange(event) {
         if (event.data === YT.PlayerState.PLAYING) {
+            // Timer-Berechnung: Dauer minus 4 Sekunden Sicherheit
             const duration = player.getDuration();
             const timeToWait = (duration - player.getCurrentTime()) - 4;
+            
             clearTimeout(safetyTimer);
             if (timeToWait > 0) {
+                console.log("Wechsel in " + timeToWait + "s geplant.");
                 safetyTimer = setTimeout(handleTransition, timeToWait * 1000);
             }
+
             if(mode === 'MUSIC') {
                 document.getElementById('video-title').innerText = player.getVideoData().title;
                 document.getElementById('tag').classList.add('show');
                 setTimeout(() => document.getElementById('tag').classList.remove('show'), 6000);
             }
         }
+        
+        // Backup: Falls der Video-End-Status doch durchkommt
+        if (event.data === YT.PlayerState.ENDED) {
+            handleTransition();
+        }
     }
 
     function handleTransition() {
         clearTimeout(safetyTimer);
         mode = (mode === 'MUSIC') ? 'INTERMISSION' : 'MUSIC';
+        
         const list = (mode === 'MUSIC') ? musicPlaylistId : intermissionPlaylistId;
-        const index = (mode === 'MUSIC') ? Math.floor(Math.random() * 50) : Math.floor(Math.random() * 10);
-        player.loadPlaylist({ list: list, listType: 'playlist', index: index });
+        const range = (mode === 'MUSIC') ? 50 : 10;
+        
+        player.loadPlaylist({
+            list: list,
+            listType: 'playlist',
+            index: Math.floor(Math.random() * range)
+        });
     }
 
     function powerOn() {
         document.getElementById('overlay').style.display = 'none';
         player.unMute();
-        player.loadPlaylist({ list: musicPlaylistId, listType: 'playlist', index: Math.floor(Math.random() * 50) });
+        player.loadPlaylist({
+            list: musicPlaylistId,
+            listType: 'playlist',
+            index: Math.floor(Math.random() * 50)
+        });
     }
 
-    setInterval(updateClocks, 1000);
-    updateClocks();
+    setInterval(() => {
+        const n = new Date();
+        document.getElementById('viva-clock').innerText = n.getHours().toString().padStart(2, '0') + ":" + n.getMinutes().toString().padStart(2, '0');
+    }, 1000);
 </script>
 </body>
 </html>
