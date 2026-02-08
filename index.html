@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVA REWIND - TEST 15/END</title>
+    <title>VIVA REWIND - SINGLE VIDEO TEST</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Arial Black', sans-serif; margin: 0; overflow: hidden; }
         #player-wrapper { position: absolute; inset: 0; pointer-events: none; }
@@ -13,12 +13,12 @@
 </head>
 <body>
 
-<div id="status-box">Bereit für Test...</div>
+<div id="status-box">Bereit für Single-Video Test...</div>
 
 <div id="overlay" onclick="powerOn()">
-    <h1 style="color:#FFEA00">START TEST</h1>
-    <p>Musik: 15s | Einspieler: Bis Ende</p>
-    <div id="build-stamp">VERSION: 08.02.2026 - 19:10 CET</div>
+    <h1 style="color:#FFEA00">START SINGLE-TEST</h1>
+    <p>Musik: 15s | Einspieler: Single Video</p>
+    <div id="build-stamp">VERSION: 08.02.2026 - 19:15 CET</div>
 </div>
 
 <div id="player-wrapper"><div id="player"></div></div>
@@ -30,7 +30,7 @@
     let testTimer;
     let countdown;
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
-    const intermissionPlaylistId = 'PLQ7SWY9Xieg3hXzm58s84PRe53LttQbJl';
+    const singleIntermissionId = 'h07xiwYGLvs'; // Dein Test-Video
 
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('player', {
@@ -42,9 +42,9 @@
     }
 
     function onPlayerStateChange(event) {
-        // Logik für Einspieler: Warte auf natürliches Ende
+        // Logik für Einspieler: Warte auf das echte Ende des Clips
         if (mode === 'INTERMISSION' && event.data === YT.PlayerState.ENDED) {
-            console.log("Einspieler zu Ende -> Wechsel zu Musik");
+            console.log("Einspieler-Clip beendet -> Zurück zur Musik");
             doSwitch();
         }
 
@@ -68,7 +68,7 @@
         }, 1000);
 
         testTimer = setTimeout(() => {
-            console.log("15 Sekunden Musik um -> Wechsel zu Einspieler");
+            console.log("15s Musik vorbei -> Lade Single Video");
             doSwitch();
         }, 15000);
     }
@@ -77,26 +77,29 @@
         clearTimeout(testTimer);
         clearInterval(countdown);
         
-        mode = (mode === 'MUSIC') ? 'INTERMISSION' : 'MUSIC';
-        const list = (mode === 'MUSIC') ? musicPlaylistId : intermissionPlaylistId;
-        const range = (mode === 'MUSIC') ? 50 : 10;
-        
-        document.getElementById('status-box').innerText = "LADE: " + mode + "...";
-        
-        player.loadPlaylist({
-            list: list,
-            listType: 'playlist',
-            index: Math.floor(Math.random() * range)
-        });
+        if (mode === 'MUSIC') {
+            mode = 'INTERMISSION';
+            document.getElementById('status-box').innerText = "LADE EINSPIELER-VIDEO...";
+            // Lade das einzelne Video direkt
+            player.loadVideoById(singleIntermissionId);
+        } else {
+            mode = 'MUSIC';
+            document.getElementById('status-box').innerText = "LADE MUSIK-PLAYLIST...";
+            // Zurück zur Playlist
+            player.loadPlaylist({
+                list: musicPlaylistId,
+                listType: 'playlist',
+                index: Math.floor(Math.random() * 50)
+            });
+        }
     }
 
     function powerOn() {
         document.getElementById('overlay').style.display = 'none';
         player.unMute();
-        // Wir starten den Kreislauf
+        // Start mit Musik
         player.loadPlaylist({ list: musicPlaylistId, listType: 'playlist', index: Math.floor(Math.random() * 50) });
     }
 </script>
 </body>
-    </html>
-    
+</html>
