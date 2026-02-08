@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VIVA REWIND - FINAL FLOW</title>
+    <title>VIVA REWIND - TIMER MODE</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; --logo-blau: #1a4a9e; --logo-gelb: #ffff00; --start-gelb: #FFEA00; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -54,10 +54,8 @@
         <div class="rewind-text">rewind</div>
     </div>
     <div id="player-wrapper"><div id="player"></div></div>
-    <div id="tag"><div id="video-title" style="font-size: 18px; text-transform: uppercase;">Lade...</div></div>
-    <div id="controls">
-        <button class="btn" onclick="zap(event)">ZAPPEN</button>
-    </div>
+    <div id="tag"><div id="video-title" style="font-size: 18px; text-transform: uppercase;">VIVA...</div></div>
+    <div id="controls"><button class="btn" onclick="zap(event)">ZAPPEN</button></div>
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -65,6 +63,8 @@
     let player;
     let uiTimer;
     let isIntermission = false;
+    let lastSwitchTime = Date.now();
+    const SWITCH_INTERVAL = 60000; // 60 Sekunden Musik, dann Einspieler
 
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
     const vivaPlaylistId = 'PLQ7SWY9Xieg3hXzm58s84PRe53LttQbJl';
@@ -88,21 +88,23 @@
     function updateClock() {
         const n = new Date();
         document.getElementById('viva-clock').innerText = n.getHours().toString().padStart(2, '0') + ":" + n.getMinutes().toString().padStart(2, '0');
+        
+        // TIMER CHECK: Wenn wir Musik hören und 60 Sek rum sind -> Einspieler!
+        if (!isIntermission && player && player.getPlayerState() === YT.PlayerState.PLAYING) {
+            if (Date.now() - lastSwitchTime > SWITCH_INTERVAL) {
+                console.log("Timer abgelaufen! Erzwinge Einspieler.");
+                forceIntermission();
+            }
+        }
     }
-    setInterval(updateClock, 1000); updateClock();
+    setInterval(updateClock, 1000);
 
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('player', {
             height: '100%', width: '100%',
             host: 'https://www.youtube-nocookie.com',
-            playerVars: { 
-                autoplay: 0, controls: 0, modestbranding: 1, rel: 0, 
-                iv_load_policy: 3, playsinline: 1, enablejsapi: 1 
-            },
-            events: {
-                'onReady': () => console.log("VIVA Online"),
-                'onStateChange': onPlayerStateChange
-            }
+            playerVars: { autoplay: 0, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3, playsinline: 1, enablejsapi: 1 },
+            events: { 'onStateChange': onPlayerStateChange }
         });
     }
 
@@ -118,20 +120,30 @@
             }
         }
 
-        if (event.data === YT.PlayerState.ENDED) {
-            // Nach JEDEM Video umschalten
-            isIntermission = !isIntermission;
-            const targetList = isIntermission ? vivaPlaylistId : musicPlaylistId;
-            console.log("Video Ende. Lade jetzt: " + (isIntermission ? "EINPLAYER" : "MUSIK"));
-            playFromList(targetList);
+        // Wenn Einspieler zu Ende -> Sofort zurück zur Musik
+        if (event.data === YT.PlayerState.ENDED && isIntermission) {
+            console.log("Einspieler zu Ende. Zurück zur Musik.");
+            isIntermission = false;
+            lastSwitchTime = Date.now();
+            playFromList(musicPlaylistId, 150);
+        }
+        
+        // Falls Musik zu Ende geht bevor Timer abläuft, einfach nächsten Song
+        if (event.data === YT.PlayerState.ENDED && !isIntermission) {
+            playFromList(musicPlaylistId, 150);
         }
     }
 
-    function playFromList(listId) {
-        // Sicherstellen, dass der Index nicht zu hoch ist
-        const maxIdx = (listId === vivaPlaylistId) ? 5 : 80;
-        const randomPos = Math.floor(Math.random() * maxIdx);
-        
+    function forceIntermission() {
+        isIntermission = true;
+        document.body.classList.add('zapping');
+        zapSound.play();
+        playFromList(vivaPlaylistId, 10);
+        setTimeout(() => document.body.classList.remove('zapping'), 1500);
+    }
+
+    function playFromList(listId, range) {
+        const randomPos = Math.floor(Math.random() * range);
         player.loadPlaylist({
             list: listId,
             listType: 'playlist',
@@ -143,7 +155,8 @@
         document.getElementById('overlay').style.display = 'none';
         player.unMute();
         isIntermission = false;
-        playFromList(musicPlaylistId);
+        lastSwitchTime = Date.now();
+        playFromList(musicPlaylistId, 150);
     }
 
     function zap(e) {
@@ -151,7 +164,8 @@
         zapSound.play();
         document.body.classList.add('zapping');
         isIntermission = false;
-        playFromList(musicPlaylistId);
+        lastSwitchTime = Date.now();
+        playFromList(musicPlaylistId, 150);
         setTimeout(() => document.body.classList.remove('zapping'), 1500);
     }
 </script>
