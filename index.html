@@ -2,22 +2,38 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVA REWIND - ROBUST LOOP</title>
+    <title>VIVA REWIND - ULTIMATE EDITION</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
-        .player-container { position: absolute; inset: 0; transition: opacity 0.5s; background: #000; pointer-events: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; color: #fff; }
+        .player-container { position: absolute; inset: 0; transition: opacity 0.6s ease-in-out; background: #000; pointer-events: none; }
         #container-music { z-index: 10; opacity: 1; }
         #container-inter { z-index: 5; opacity: 0; }
         .active { opacity: 1 !important; z-index: 20 !important; }
-        #status-box { position: absolute; top: 20px; right: 20px; z-index: 2000; background: rgba(0,0,0,0.8); color: #0f0; padding: 8px; font-family: monospace; font-size: 10px; border: 1px solid #0f0; }
-        #overlay { position: fixed; inset: 0; z-index: 9999; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; }
+        #viva-logo { position: absolute; top: 30px; right: 30px; z-index: 100; display: flex; opacity: 0.8; }
+        .logo-svg { width: 35px; height: 35px; fill: none; stroke-width: 12; stroke-linejoin: round; }
+        .blau { stroke: #1a4a9e; } .gelb { stroke: #ffff00; }
+        #tag { position: absolute; bottom: 18%; left: 0; z-index: 200; background: linear-gradient(90deg, var(--viva-cyan), var(--viva-pink)); color: white; padding: 12px 35px; box-shadow: 8px 8px 0px #000; transform: translateX(-105%); transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); }
+        #tag.show { transform: translateX(0); }
+        #status-box { position: absolute; top: 20px; right: 20px; z-index: 2000; background: rgba(0,0,0,0.8); color: #0f0; padding: 8px; font-family: monospace; font-size: 10px; border: 1px solid #0f0; cursor: pointer; }
+        #overlay { position: fixed; inset: 0; z-index: 9999; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; text-align: center; }
+        .viva-btn { padding: 20px 40px; border: 4px solid var(--viva-cyan); color: var(--viva-cyan); font-size: 24px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-<div id="status-box">SYSTEM READY</div>
-<div id="overlay" onclick="powerOn()"><h1>START PROGRAMM</h1></div>
+<div id="status-box" onclick="showBlacklist()">SYSTEM: STANDBY</div>
+
+<div id="overlay" onclick="powerOn()">
+    <div class="viva-btn">VIVA STARTEN</div>
+</div>
+
+<div id="viva-logo">
+    <svg class="logo-svg blau" viewBox="0 0 100 100"><path d="M15,25 L85,25 L50,85 Z"/></svg> 
+    <svg class="logo-svg gelb" style="margin-left:-10px;" viewBox="0 0 100 100"><path d="M15,75 L85,75 L50,15 Z"/></svg> 
+</div>
+
+<div id="tag"><div id="video-title" style="font-size: 18px;">VIVA...</div></div>
 
 <div id="container-music" class="player-container"><div id="player-music"></div></div>
 <div id="container-inter" class="player-container"><div id="player-inter"></div></div>
@@ -29,12 +45,12 @@
     let isPreloading = false;
     let interReady = false;
     let blacklist = JSON.parse(localStorage.getItem('viva_blacklist') || '[]');
-    
+
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
-    const intermissionList = ['h07xiwYGLvs', 'VId6Vv9S9M0', '8-nO87p97v8'];
+    const interPlaylistId = 'PLQ7SWY9Xieg3hXzm58s84PRe53LttQbJl';
 
     function onYouTubeIframeAPIReady() {
-        const pVars = { autoplay: 0, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3, enablejsapi: 1 };
+        const pVars = { autoplay: 0, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3, enablejsapi: 1, origin: window.location.origin };
 
         playerMusic = new YT.Player('player-music', {
             height: '100%', width: '100%', playerVars: pVars,
@@ -55,7 +71,7 @@
                         playerInter.pauseVideo();
                         isPreloading = false;
                         interReady = true;
-                        updateStatus("EINSPIELER READY");
+                        updateStatus("EINSPIELER: READY");
                     }
                     if (e.data === YT.PlayerState.ENDED && mode === 'INTER') zapToMusic();
                 },
@@ -64,30 +80,45 @@
         });
     }
 
+    function handleErr(e, type) {
+        let badId = "unknown";
+        try { badId = (type === 'MUSIC') ? playerMusic.getVideoData().video_id : playerInter.getVideoData().video_id; } catch(err) {}
+        
+        if (badId !== "unknown" && !blacklist.includes(badId)) {
+            blacklist.push(badId);
+            localStorage.setItem('viva_blacklist', JSON.stringify(blacklist));
+        }
+        
+        console.error("Defekt (" + type + "): " + badId);
+        if (type === 'MUSIC') setTimeout(zapToMusic, 1000);
+        else { interReady = false; isPreloading = false; }
+    }
+
+    function showBlacklist() {
+        console.log("Defekte IDs:", blacklist.join(', '));
+        alert(blacklist.length + " defekte Videos geloggt. Siehe Konsole (F12).");
+    }
+
     function startWatchdog() {
         if (watchdog) clearInterval(watchdog);
         watchdog = setInterval(() => {
-            if (mode === 'MUSIC' && playerMusic && playerMusic.getDuration) {
-                const dur = playerMusic.getDuration();
-                const cur = playerMusic.getCurrentTime();
-                if (dur > 0) {
-                    const timeLeft = dur - cur;
+            if (mode === 'MUSIC' && playerMusic.getDuration) {
+                const timeLeft = playerMusic.getDuration() - playerMusic.getCurrentTime();
+                if (playerMusic.getDuration() > 0) {
                     updateStatus("SONG: " + Math.round(timeLeft) + "s");
-
-                    // Preload bei 40s
                     if (timeLeft <= 40 && !interReady && !isPreloading) {
                         isPreloading = true;
-                        const id = intermissionList[Math.floor(Math.random() * intermissionList.length)];
                         playerInter.mute();
-                        playerInter.loadVideoById(id);
-                        console.log("Preloading Inter: " + id);
+                        playerInter.loadPlaylist({
+                            list: interPlaylistId,
+                            listType: 'playlist',
+                            index: Math.floor(Math.random() * 15) // Ersten 15 Clips
+                        });
                     }
-
-                    // Wechsel bei 3s
                     if (timeLeft <= 3.0 && interReady) zapToInter();
                 }
             }
-            if (mode === 'INTER' && playerInter && playerInter.getDuration) {
+            if (mode === 'INTER' && playerInter.getDuration) {
                 const timeLeftInter = playerInter.getDuration() - playerInter.getCurrentTime();
                 if (timeLeftInter <= 3.0) zapToMusic();
             }
@@ -106,26 +137,15 @@
 
     function zapToMusic() {
         mode = 'MUSIC';
-        interReady = false; 
-        isPreloading = false;
+        interReady = false; isPreloading = false;
         document.getElementById('container-inter').classList.remove('active');
         document.getElementById('container-music').style.opacity = "1";
-        
-        // Playlist neu laden mit zufälligem Start-Index
         playerMusic.loadPlaylist({
             list: musicPlaylistId,
             listType: 'playlist',
             index: Math.floor(Math.random() * 50)
         });
-        playerMusic.unMute();
-        
         setTimeout(() => playerInter.stopVideo(), 500);
-    }
-
-    function handleErr(e, type) {
-        console.error("Fehler in " + type + ": " + e.data);
-        if (type === 'MUSIC') setTimeout(zapToMusic, 1000);
-        else { interReady = false; isPreloading = false; }
     }
 
     function updateStatus(txt) { document.getElementById('status-box').innerText = txt; }
