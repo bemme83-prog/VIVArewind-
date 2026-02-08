@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VIVA REWIND PRO - TV FLOW</title>
+    <title>VIVA REWIND - TEST MODE</title>
     <style>
         :root { 
             --viva-pink: #ff00ff; 
@@ -91,11 +91,12 @@
     </div>
 </div>
 
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
     let player;
     let uiTimer;
     let songCounter = 0;
-    let nextIntermissionAt = 2; // Erster Einspieler nach 2 Songs
+    let nextIntermissionAt = 1; // TEST-MODUS: Nach JEDEM Song ein Einspieler
     let isIntermission = false;
 
     const musicPlaylist = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
@@ -139,7 +140,7 @@
                 rel: 0, iv_load_policy: 3, playsinline: 1, enablejsapi: 1
             },
             events: {
-                'onReady': () => { console.log("Player bereit"); },
+                'onReady': () => { console.log("Player Bereit"); },
                 'onStateChange': onPlayerStateChange,
                 'onError': () => zap()
             }
@@ -160,55 +161,57 @@
             }
         }
         
-        // Wenn ein Video endet: Logik für den nächsten Clip
         if (event.data === YT.PlayerState.ENDED) {
             if (isIntermission) {
-                // Einspieler ist fertig -> Zurück zur Musik
+                console.log("Einspieler beendet. Zurück zur Musik.");
                 isIntermission = false;
-                playFromPlaylist(musicPlaylist);
+                playRandomFromPlaylist(musicPlaylist);
             } else {
-                // Song ist fertig -> Zähler hoch
                 songCounter++;
+                console.log("Song beendet. Counter:", songCounter);
                 if (songCounter >= nextIntermissionAt) {
-                    // Zeit für einen Einspieler!
+                    console.log("Starte Einspieler!");
                     isIntermission = true;
                     songCounter = 0;
-                    nextIntermissionAt = Math.floor(Math.random() * 2) + 2; // Nächster nach 2 oder 3 Songs
-                    playFromPlaylist(vivaPlaylist);
+                    playRandomFromPlaylist(vivaPlaylist);
                 } else {
-                    playFromPlaylist(musicPlaylist);
+                    playRandomFromPlaylist(musicPlaylist);
                 }
             }
         }
     }
 
-    function playFromPlaylist(id) {
+    function playRandomFromPlaylist(listId) {
+        // Wir laden die Playlist neu und springen an eine zufällige Stelle
+        // Der Pool ist 50 bei Musik, bei Einspielern etwas kleiner (ca. 20)
+        const range = (listId === vivaPlaylist) ? 15 : 150;
+        const randomPos = Math.floor(Math.random() * range);
+        
         player.loadPlaylist({
-            list: id,
+            list: listId,
             listType: 'playlist',
-            index: Math.floor(Math.random() * 50) // Zufälliger Startpunkt in der Playlist
+            index: randomPos
         });
     }
 
     function powerOn() {
         document.getElementById('overlay').style.display = 'none';
         player.unMute();
-        playFromPlaylist(musicPlaylist);
+        isIntermission = false;
+        playRandomFromPlaylist(musicPlaylist);
     }
 
     function zap(e) {
         if(e) e.stopPropagation();
         zapSound.play();
         document.body.classList.add('zapping');
-        isIntermission = false; // Manueller Zap geht immer zur Musik
+        isIntermission = false;
         songCounter = 0;
-        playFromPlaylist(musicPlaylist);
+        playRandomFromPlaylist(musicPlaylist);
         setTimeout(() => {
             if(document.body.classList.contains('zapping')) document.body.classList.remove('zapping');
         }, 2000);
     }
 </script>
-<script src="https://www.youtube.com/iframe_api"></script>
 </body>
-    </html>
-    
+</html>
