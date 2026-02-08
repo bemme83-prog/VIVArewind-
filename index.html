@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VIVA REWIND - TRUE FLOW</title>
+    <title>VIVA REWIND - FINAL FLOW</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; --logo-blau: #1a4a9e; --logo-gelb: #ffff00; --start-gelb: #FFEA00; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -64,13 +64,10 @@
 <script>
     let player;
     let uiTimer;
-    let songCounter = 0;
     let isIntermission = false;
 
-    // IDs deiner Playlists
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
     const vivaPlaylistId = 'PLQ7SWY9Xieg3hXzm58s84PRe53LttQbJl';
-    
     const zapSound = document.getElementById('zap-sound');
 
     function showUI() {
@@ -115,29 +112,26 @@
             zapSound.pause(); zapSound.currentTime = 0;
             const data = player.getVideoData();
             if(data && !isIntermission) {
-                document.getElementById('video-title').innerText = data.title;
+                document.getElementById('video-title').innerText = data.title.split(' (')[0];
                 document.getElementById('tag').classList.add('show');
                 setTimeout(() => document.getElementById('tag').classList.remove('show'), 7000);
             }
         }
 
         if (event.data === YT.PlayerState.ENDED) {
-            // LOGIK: Nach JEDEM Song ein Einspieler
-            if (!isIntermission) {
-                console.log("Song Ende -> Starte Einspieler");
-                isIntermission = true;
-                playFromList(vivaPlaylistId);
-            } else {
-                console.log("Einspieler Ende -> Zurück zur Musik");
-                isIntermission = false;
-                playFromList(musicPlaylistId);
-            }
+            // Nach JEDEM Video umschalten
+            isIntermission = !isIntermission;
+            const targetList = isIntermission ? vivaPlaylistId : musicPlaylistId;
+            console.log("Video Ende. Lade jetzt: " + (isIntermission ? "EINPLAYER" : "MUSIK"));
+            playFromList(targetList);
         }
     }
 
     function playFromList(listId) {
-        // Der Trick: Wir laden die Playlist neu mit einem zufälligen Index
-        const randomPos = Math.floor(Math.random() * 40); 
+        // Sicherstellen, dass der Index nicht zu hoch ist
+        const maxIdx = (listId === vivaPlaylistId) ? 5 : 80;
+        const randomPos = Math.floor(Math.random() * maxIdx);
+        
         player.loadPlaylist({
             list: listId,
             listType: 'playlist',
