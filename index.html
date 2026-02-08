@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VIVA REWIND - TRIGGER SYNC</title>
+    <title>VIVA REWIND - TIMER INJECTION</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; --logo-blau: #1a4a9e; --logo-gelb: #ffff00; --start-gelb: #FFEA00; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
@@ -17,27 +17,15 @@
         #player { width: 100%; height: 100%; }
         #tag { position: absolute; bottom: 18%; left: 0; z-index: 200; background: linear-gradient(90deg, var(--viva-cyan), var(--viva-pink)); color: white; padding: 12px 35px; box-shadow: 8px 8px 0px #000; transform: translateX(-105%); transition: transform 0.6s; }
         #tag.show { transform: translateX(0); }
-        
-        /* Overlay für den Wechsel-Klick */
-        #next-trigger-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,0.01); display: none; cursor: pointer; }
-        #next-info { position: absolute; bottom: 10%; width: 100%; text-align: center; color: var(--viva-cyan); font-weight: bold; font-size: 12px; pointer-events: none; }
-
         #overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
         #start-text { color: var(--start-gelb); font-size: 40px; font-weight: 900; animation: pulse 1.5s infinite alternate; }
         @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
-        
-        #controls { position: absolute; bottom: 8%; width: 100%; z-index: 300; display: flex; justify-content: center; gap: 15px; opacity: 0; transition: opacity 0.5s; }
-        .btn { background: rgba(0,0,0,0.8); border: 2px solid #fff; color: #fff; padding: 15px 25px; font-weight: bold; border-radius: 10px; cursor: pointer; text-transform: uppercase; font-size: 14px; }
     </style>
 </head>
-<body onmousemove="showUI()">
+<body onclick="showUI()">
 
 <div id="overlay" onclick="powerOn()">
     <div id="start-text">START</div>
-</div>
-
-<div id="next-trigger-overlay" onclick="handleManualTransition()">
-    <div id="next-info">KLICKEN FÜR NÄCHSTES VIDEO</div>
 </div>
 
 <div id="screen">
@@ -51,18 +39,13 @@
     </div>
     <div id="player-wrapper"><div id="player"></div></div>
     <div id="tag"><div id="video-title" style="font-size: 18px;">VIVA...</div></div>
-    
-    <div id="controls">
-        <button id="viva-btn" class="btn" style="border-color: #ff00ff; color: #ff00ff;" onclick="forceIntermission()">VIVA Einspieler</button>
-        <button class="btn" onclick="zapMusic()">Zappen</button>
-    </div>
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
     let player;
-    let uiTimer;
-    let mode = 'MUSIC'; // 'MUSIC' oder 'VIVA'
+    let mode = 'MUSIC';
+    let transitionTimer; // Unser Zeit-Wächter
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
     const testIntermissionId = 'h07xiwYGLvs';
 
@@ -71,15 +54,15 @@
             height: '100%', width: '100%',
             host: 'https://www.youtube-nocookie.com',
             playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, playsinline: 1, enablejsapi: 1 },
-            events: { 
-                'onStateChange': onPlayerStateChange 
-            }
+            events: { 'onStateChange': onPlayerStateChange }
         });
     }
 
     function onPlayerStateChange(event) {
         if (event.data === YT.PlayerState.PLAYING) {
-            hideTriggerOverlay();
+            // Sobald das Video spielt, berechnen wir die Restzeit
+            startTransitionTimer();
+            
             const data = player.getVideoData();
             if(data && mode === 'MUSIC') {
                 document.getElementById('video-title').innerText = data.title;
@@ -88,52 +71,53 @@
             }
         }
         
+        // Falls der Timer mal versagt, ist ENDED unser Backup
         if (event.data === YT.PlayerState.ENDED) {
-            showTriggerOverlay();
+            handleTransition();
         }
     }
 
-    function showTriggerOverlay() {
-        document.getElementById('next-trigger-overlay').style.display = 'block';
+    function startTransitionTimer() {
+        // Bestehenden Timer löschen
+        clearTimeout(transitionTimer);
+        
+        // Dauer abfragen
+        const duration = player.getDuration();
+        const currentTime = player.getCurrentTime();
+        const timeLeft = (duration - currentTime) - 0.5; // Wir feuern 0,5 Sek vor Schluss
+
+        if (timeLeft > 0) {
+            console.log("Wechsel geplant in " + timeLeft + " Sekunden.");
+            transitionTimer = setTimeout(() => {
+                console.log("Timer abgelaufen - Wechsel wird erzwungen!");
+                handleTransition();
+            }, timeLeft * 1000);
+        }
     }
 
-    function hideTriggerOverlay() {
-        document.getElementById('next-trigger-overlay').style.display = 'none';
-    }
-
-    function handleManualTransition() {
+    function handleTransition() {
+        clearTimeout(transitionTimer);
         if (mode === 'MUSIC') {
-            forceIntermission();
+            mode = 'VIVA';
+            player.loadVideoById(testIntermissionId);
         } else {
-            zapMusic();
+            mode = 'MUSIC';
+            player.loadPlaylist({
+                list: musicPlaylistId,
+                listType: 'playlist',
+                index: Math.floor(Math.random() * 50)
+            });
         }
-    }
-
-    function zapMusic() {
-        mode = 'MUSIC';
-        player.loadPlaylist({
-            list: musicPlaylistId,
-            listType: 'playlist',
-            index: Math.floor(Math.random() * 50)
-        });
-    }
-
-    function forceIntermission() {
-        mode = 'VIVA';
-        player.loadVideoById(testIntermissionId);
     }
 
     function powerOn() {
         document.getElementById('overlay').style.display = 'none';
         player.unMute();
-        zapMusic();
-    }
-
-    function showUI() {
-        const c = document.getElementById('controls');
-        c.style.opacity = "1";
-        clearTimeout(uiTimer);
-        uiTimer = setTimeout(() => c.style.opacity = "0", 3000);
+        player.loadPlaylist({
+            list: musicPlaylistId,
+            listType: 'playlist',
+            index: Math.floor(Math.random() * 50)
+        });
     }
 
     setInterval(() => {
