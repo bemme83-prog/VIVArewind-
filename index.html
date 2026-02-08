@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VIVA REWIND - MANUAL TRIGGER</title>
+    <title>VIVA REWIND - TRIGGER SYNC</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; --logo-blau: #1a4a9e; --logo-gelb: #ffff00; --start-gelb: #FFEA00; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
@@ -17,29 +17,27 @@
         #player { width: 100%; height: 100%; }
         #tag { position: absolute; bottom: 18%; left: 0; z-index: 200; background: linear-gradient(90deg, var(--viva-cyan), var(--viva-pink)); color: white; padding: 12px 35px; box-shadow: 8px 8px 0px #000; transform: translateX(-105%); transition: transform 0.6s; }
         #tag.show { transform: translateX(0); }
+        
+        /* Overlay für den Wechsel-Klick */
+        #next-trigger-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,0.01); display: none; cursor: pointer; }
+        #next-info { position: absolute; bottom: 10%; width: 100%; text-align: center; color: var(--viva-cyan); font-weight: bold; font-size: 12px; pointer-events: none; }
+
         #overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
         #start-text { color: var(--start-gelb); font-size: 40px; font-weight: 900; animation: pulse 1.5s infinite alternate; }
-        #version-stamp { position: absolute; bottom: 20px; color: rgba(255,255,255,0.4); font-size: 12px; }
         @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
         
-        /* Neue Buttons */
-        #controls { position: absolute; bottom: 8%; width: 100%; z-index: 300; display: flex; justify-content: center; gap: 15px; opacity: 1; transition: opacity 0.5s; }
+        #controls { position: absolute; bottom: 8%; width: 100%; z-index: 300; display: flex; justify-content: center; gap: 15px; opacity: 0; transition: opacity 0.5s; }
         .btn { background: rgba(0,0,0,0.8); border: 2px solid #fff; color: #fff; padding: 15px 25px; font-weight: bold; border-radius: 10px; cursor: pointer; text-transform: uppercase; font-size: 14px; }
-        .btn-viva { border-color: var(--viva-pink); color: var(--viva-pink); }
     </style>
 </head>
-<body onmousemove="showUI()" onclick="showUI()">
+<body onmousemove="showUI()">
 
 <div id="overlay" onclick="powerOn()">
-    <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
-        <div style="display: flex;">
-            <svg class="logo-svg blau" style="width:60px; height:60px; stroke-width:15;" viewBox="0 0 100 100"><path d="M15,25 L85,25 L50,85 Z"/></svg> 
-            <svg class="logo-svg gelb" style="width:60px; height:60px; stroke-width:15; margin-left:-15px;" viewBox="0 0 100 100"><path d="M15,75 L85,75 L50,15 Z"/></svg> 
-        </div>
-        <div class="rewind-text" style="font-size:24px;">rewind</div>
-    </div>
     <div id="start-text">START</div>
-    <div id="version-stamp">MANUAL BUILD: 08.02.2026 - 15:55 CET</div>
+</div>
+
+<div id="next-trigger-overlay" onclick="handleManualTransition()">
+    <div id="next-info">KLICKEN FÜR NÄCHSTES VIDEO</div>
 </div>
 
 <div id="screen">
@@ -55,8 +53,8 @@
     <div id="tag"><div id="video-title" style="font-size: 18px;">VIVA...</div></div>
     
     <div id="controls">
+        <button id="viva-btn" class="btn" style="border-color: #ff00ff; color: #ff00ff;" onclick="forceIntermission()">VIVA Einspieler</button>
         <button class="btn" onclick="zapMusic()">Zappen</button>
-        <button class="btn btn-viva" onclick="forceIntermission()">VIVA Einspieler</button>
     </div>
 </div>
 
@@ -64,6 +62,7 @@
 <script>
     let player;
     let uiTimer;
+    let mode = 'MUSIC'; // 'MUSIC' oder 'VIVA'
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
     const testIntermissionId = 'h07xiwYGLvs';
 
@@ -71,35 +70,47 @@
         player = new YT.Player('player', {
             height: '100%', width: '100%',
             host: 'https://www.youtube-nocookie.com',
-            playerVars: { 
-                autoplay: 1, controls: 0, modestbranding: 1, 
-                rel: 0, playsinline: 1, enablejsapi: 1,
-                origin: window.location.origin,
-                widget_referrer: window.location.href
-            },
+            playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, playsinline: 1, enablejsapi: 1 },
             events: { 
-                'onReady': (e) => console.log("Player Ready"),
-                'onStateChange': onPlayerStateChange
+                'onStateChange': onPlayerStateChange 
             }
         });
     }
 
     function onPlayerStateChange(event) {
         if (event.data === YT.PlayerState.PLAYING) {
+            hideTriggerOverlay();
             const data = player.getVideoData();
-            if(data && !data.title.includes('VIVA')) { // Nur Songtitel anzeigen
+            if(data && mode === 'MUSIC') {
                 document.getElementById('video-title').innerText = data.title;
                 document.getElementById('tag').classList.add('show');
                 setTimeout(() => document.getElementById('tag').classList.remove('show'), 6000);
             }
         }
-        // Automatik-Logik (als Backup)
+        
         if (event.data === YT.PlayerState.ENDED) {
+            showTriggerOverlay();
+        }
+    }
+
+    function showTriggerOverlay() {
+        document.getElementById('next-trigger-overlay').style.display = 'block';
+    }
+
+    function hideTriggerOverlay() {
+        document.getElementById('next-trigger-overlay').style.display = 'none';
+    }
+
+    function handleManualTransition() {
+        if (mode === 'MUSIC') {
+            forceIntermission();
+        } else {
             zapMusic();
         }
     }
 
     function zapMusic() {
+        mode = 'MUSIC';
         player.loadPlaylist({
             list: musicPlaylistId,
             listType: 'playlist',
@@ -108,7 +119,7 @@
     }
 
     function forceIntermission() {
-        console.log("Manueller Trigger: Einspieler");
+        mode = 'VIVA';
         player.loadVideoById(testIntermissionId);
     }
 
@@ -122,7 +133,7 @@
         const c = document.getElementById('controls');
         c.style.opacity = "1";
         clearTimeout(uiTimer);
-        uiTimer = setTimeout(() => c.style.opacity = "0", 4000);
+        uiTimer = setTimeout(() => c.style.opacity = "0", 3000);
     }
 
     setInterval(() => {
