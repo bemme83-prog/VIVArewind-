@@ -3,57 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VIVA REWIND - 30s TEST</title>
+    <title>VIVA REWIND - COUNTDOWN TEST</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; --logo-blau: #1a4a9e; --logo-gelb: #ffff00; --start-gelb: #FFEA00; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
         
-        /* Startbildschirm */
+        /* Debug Countdown Anzeige */
+        #debug-timer { 
+            position: absolute; top: 80px; left: 30px; z-index: 500; 
+            color: #0f0; font-family: monospace; font-size: 14px; background: rgba(0,0,0,0.5); padding: 5px;
+        }
+
         #overlay { 
             position: fixed; inset: 0; background: #000; z-index: 1000; 
-            display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            cursor: pointer; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; 
         }
-        #start-text { color: var(--start-gelb); font-size: 40px; font-weight: 900; animation: pulse 1.5s infinite alternate; }
-        #build-stamp { 
-            position: absolute; bottom: 20px; right: 20px; 
-            color: rgba(255,255,255,0.6); font-family: sans-serif; font-size: 14px; font-weight: bold;
-        }
+        #build-stamp { position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.6); font-size: 14px; }
 
         /* TV Interface */
         #screen { position: relative; width: 100%; height: 100dvh; background: #000; }
-        #viva-container-corner { position: absolute; top: 30px; right: 30px; z-index: 100; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none; }
+        #viva-clock { position: absolute; top: 32px; left: 30px; z-index: 100; color: #fff; font-size: 22px; font-weight: bold; }
+        #viva-container-corner { position: absolute; top: 30px; right: 30px; z-index: 100; display: flex; flex-direction: column; align-items: flex-end; }
         .logo-svg { width: 35px; height: 35px; fill: none; stroke-width: 10; stroke-linejoin: round; }
         .blau { stroke: var(--logo-blau); } .gelb { stroke: var(--logo-gelb); }
-        .rewind-text { color: #fff; font-family: 'Arial', sans-serif; font-style: italic; font-size: 14px; font-weight: bold; margin-top: -2px; text-transform: lowercase; }
-        #viva-clock { position: absolute; top: 32px; left: 30px; z-index: 100; color: #fff; font-size: 22px; font-weight: bold; }
         #player-wrapper { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
         #player { width: 100%; height: 100%; }
         #tag { position: absolute; bottom: 18%; left: 0; z-index: 200; background: linear-gradient(90deg, var(--viva-cyan), var(--viva-pink)); color: white; padding: 12px 35px; box-shadow: 8px 8px 0px #000; transform: translateX(-105%); transition: transform 0.6s; }
         #tag.show { transform: translateX(0); }
-
-        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
     </style>
 </head>
 <body>
 
 <div id="overlay" onclick="powerOn()">
-    <div style="display: flex; margin-bottom: 20px;">
-        <svg class="logo-svg blau" style="width:60px; height:60px; stroke-width:15;" viewBox="0 0 100 100"><path d="M15,25 L85,25 L50,85 Z"/></svg> 
-        <svg class="logo-svg gelb" style="width:60px; height:60px; stroke-width:15; margin-left:-15px;" viewBox="0 0 100 100"><path d="M15,75 L85,75 L50,15 Z"/></svg> 
-    </div>
-    <div id="start-text">START TEST (30s)</div>
-    <div id="build-stamp">BUILD: 17:25 CET</div>
+    <h1 style="color:var(--start-gelb)">START DEBUG</h1>
+    <div id="build-stamp">BUILD: 18:12 CET</div>
 </div>
 
 <div id="screen">
+    <div id="debug-timer">Warne auf Video...</div>
     <div id="viva-clock">00:00</div>
     <div id="viva-container-corner">
-        <div id="viva-logo-corner">
+        <div style="display:flex">
             <svg class="logo-svg blau" viewBox="0 0 100 100"><path d="M15,25 L85,25 L50,85 Z"/></svg> 
             <svg class="logo-svg gelb" style="margin-left:-10px;" viewBox="0 0 100 100"><path d="M15,75 L85,75 L50,15 Z"/></svg> 
         </div>
-        <div class="rewind-text">rewind</div>
     </div>
     <div id="player-wrapper"><div id="player"></div></div>
     <div id="tag"><div id="video-title" style="font-size: 18px;">VIVA...</div></div>
@@ -63,7 +56,8 @@
 <script>
     let player;
     let mode = 'MUSIC';
-    let safetyTimer; 
+    let safetyTimer;
+    let countdownInterval;
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
     const intermissionPlaylistId = 'PLQ7SWY9Xieg3hXzm58s84PRe53LttQbJl';
 
@@ -78,25 +72,46 @@
 
     function onPlayerStateChange(event) {
         if (event.data === YT.PlayerState.PLAYING) {
-            // TEST-MODUS: Wir erzwingen den Wechsel nach exakt 30 Sekunden
-            console.log("Video gestartet. Wechsel in 30 Sekunden...");
-            clearTimeout(safetyTimer);
-            safetyTimer = setTimeout(handleTransition, 30000); 
-
+            updateTimerLogic();
+            
             if(mode === 'MUSIC') {
-                document.getElementById('video-title').innerText = player.getVideoData().title;
+                const data = player.getVideoData();
+                document.getElementById('video-title').innerText = data.title;
                 document.getElementById('tag').classList.add('show');
                 setTimeout(() => document.getElementById('tag').classList.remove('show'), 6000);
             }
         }
     }
 
-    function handleTransition() {
+    function updateTimerLogic() {
         clearTimeout(safetyTimer);
+        clearInterval(countdownInterval);
+
+        const duration = player.getDuration();
+        const currentTime = player.getCurrentTime();
+        
+        // Wir ziehen 5 Sekunden von der Gesamtdauer ab
+        let secondsLeft = Math.floor((duration - currentTime) - 5);
+
+        if (secondsLeft > 0) {
+            // Startet den visuellen Countdown
+            countdownInterval = setInterval(() => {
+                secondsLeft--;
+                document.getElementById('debug-timer').innerText = 
+                    "MODE: " + mode + " | WECHSEL IN: " + secondsLeft + "s (Total: " + Math.round(duration) + "s)";
+                
+                if (secondsLeft <= 0) {
+                    clearInterval(countdownInterval);
+                }
+            }, 1000);
+
+            // Setzt den echten technischen Wechsel-Befehl
+            safetyTimer = setTimeout(handleTransition, secondsLeft * 1000);
+        }
+    }
+
+    function handleTransition() {
         mode = (mode === 'MUSIC') ? 'INTERMISSION' : 'MUSIC';
-        
-        console.log("Erzwungener Wechsel zu: " + mode);
-        
         const list = (mode === 'MUSIC') ? musicPlaylistId : intermissionPlaylistId;
         const range = (mode === 'MUSIC') ? 50 : 10;
         
@@ -110,11 +125,7 @@
     function powerOn() {
         document.getElementById('overlay').style.display = 'none';
         player.unMute();
-        player.loadPlaylist({
-            list: musicPlaylistId,
-            listType: 'playlist',
-            index: Math.floor(Math.random() * 50)
-        });
+        player.loadPlaylist({ list: musicPlaylistId, listType: 'playlist', index: Math.floor(Math.random() * 50) });
     }
 
     setInterval(() => {
@@ -123,5 +134,4 @@
     }, 1000);
 </script>
 </body>
-    </html>
-    
+</html>
