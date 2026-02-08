@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VIVA REWIND - ULTIMATE</title>
+    <title>VIVA REWIND - FULLSCREEN EDITION</title>
     <style>
         :root { 
             --viva-pink: #ff00ff; 
@@ -15,7 +15,7 @@
         body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; -webkit-tap-highlight-color: transparent; }
         #screen { position: relative; width: 100%; height: 100dvh; overflow: hidden; background: #000; cursor: none; }
 
-        /* CRT STATIC EFFECT - Jetzt deckend beim Zappen */
+        /* CRT STATIC EFFECT */
         #static-overlay {
             position: fixed; inset: 0; z-index: 500; pointer-events: none;
             background: #000 url('https://media.giphy.com/media/oEI9uWUicGLeE/giphy.gif');
@@ -55,19 +55,21 @@
         }
         #tag.show { transform: translateX(0); }
 
-        /* DYNAMISCHE STEUERUNG */
+        /* STEUERUNG (Zappen + Fullscreen) */
         #controls { 
             position: absolute; bottom: 10%; width: 100%; z-index: 300; 
-            display: flex; justify-content: center; opacity: 0; 
+            display: flex; justify-content: center; gap: 15px; opacity: 0; 
             transition: opacity 0.5s ease; pointer-events: none;
         }
         #controls.visible { opacity: 1; pointer-events: auto; }
-        .zap-btn { 
+        
+        .btn { 
             background: rgba(0,0,0,0.7); border: 2px solid #fff; color: #fff; 
-            padding: 18px 45px; font-weight: bold; border-radius: 50px; 
+            padding: 18px 30px; font-weight: bold; border-radius: 50px; 
             backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
             text-transform: uppercase; cursor: pointer;
         }
+        .zap-btn { padding-left: 45px; padding-right: 45px; }
 
         #overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
     </style>
@@ -80,10 +82,10 @@
 
 <div id="overlay" onclick="powerOn()">
     <div style="font-size: 55px; font-weight: 900; color: var(--viva-pink); border: 10px solid var(--viva-pink); padding: 15px 35px; letter-spacing: -2px;">VIVA</div>
-    <div style="color: white; margin-top: 20px; letter-spacing: 4px; font-size: 12px;">KLICKEN ZUM STARTEN</div>
+    <div style="color: white; margin-top: 20px; letter-spacing: 4px; font-size: 12px;">STARTEN</div>
 </div>
 
-<div id="screen">
+<div id="screen" id="main-screen">
     <div id="viva-clock">00:00</div>
     
     <div id="viva-container">
@@ -97,8 +99,12 @@
     </div>
     
     <div id="player-wrapper"><div id="player"></div></div>
-    <div id="tag"><div id="video-title" style="font-size: 18px; text-transform: uppercase;">Lade Clip...</div></div>
-    <div id="controls"><button class="zap-btn" onclick="zap(event)">ZAPPEN</button></div>
+    <div id="tag"><div id="video-title" style="font-size: 18px; text-transform: uppercase;">Lade...</div></div>
+    
+    <div id="controls">
+        <button class="btn zap-btn" onclick="zap(event)">ZAPPEN</button>
+        <button class="btn" onclick="toggleFullscreen(event)">[ ]</button>
+    </div>
 </div>
 
 <script>
@@ -117,6 +123,17 @@
             controls.classList.remove('visible');
             screen.style.cursor = 'none';
         }, 3500);
+    }
+
+    function toggleFullscreen(event) {
+        if(event) event.stopPropagation();
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                alert(`Fehler beim Vollbildmodus: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
     }
 
     function updateClock() {
@@ -144,12 +161,10 @@
     }
 
     function onPlayerStateChange(event) {
-        // Sobald das Video wirklich spielt, nehmen wir das Rauschen weg
         if (event.data === YT.PlayerState.PLAYING) {
             document.body.classList.remove('zapping');
             zapSound.pause();
             zapSound.currentTime = 0;
-
             const videoData = player.getVideoData();
             if(videoData && videoData.title) {
                 document.getElementById('video-title').innerText = videoData.title.split(' (')[0].split(' [')[0];
@@ -169,14 +184,9 @@
 
     function zap(event) {
         if(event) event.stopPropagation();
-        
-        // Rauschen Sound & Bild an
         zapSound.play();
         document.body.classList.add('zapping');
-        
         player.nextVideo();
-
-        // Sicherheits-Timeout falls ein Video gar nicht lädt
         setTimeout(() => {
             if(document.body.classList.contains('zapping')) {
                 document.body.classList.remove('zapping');
