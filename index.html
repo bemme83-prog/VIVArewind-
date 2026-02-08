@@ -3,46 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VIVA REWIND PRO</title>
+    <title>VIVA REWIND LIVE</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; }
-        
-        /* 100dvh ist der Fix für mobile Browser-Leisten */
         body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
         
-        #screen { position: relative; width: 100%; height: 100dvh; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        #screen { position: relative; width: 100%; height: 100dvh; overflow: hidden; background: #000; }
 
-        /* VIVA Logo & Uhr */
-        #viva-logo { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; gap: 3px; opacity: 0.8; }
+        /* VIVA Elemente */
+        #viva-logo { position: absolute; top: 25px; right: 25px; z-index: 100; display: flex; gap: 3px; opacity: 0.7; pointer-events: none; }
         .v-block { width: 18px; height: 28px; background: #fff; display: flex; align-items: center; justify-content: center; color: #000; font-size: 16px; font-weight: 900; }
-        #viva-clock { position: absolute; top: 22px; left: 20px; z-index: 100; color: #fff; font-size: 20px; font-weight: bold; opacity: 0.8; }
+        #viva-clock { position: absolute; top: 27px; left: 25px; z-index: 100; color: #fff; font-size: 20px; font-weight: bold; opacity: 0.8; text-shadow: 2px 2px 4px #000; }
 
-        /* Player - Skalierung angepasst für 16:9 und 4:3 Mix */
-        #player-wrapper { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
-        #player { width: 100%; height: 100%; transform: scale(1.4); }
+        /* Player - CRT Scale */
+        #player-wrapper { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+        #player { width: 100%; height: 100%; transform: scale(1.45); }
 
-        /* Bauchbinde - Höher platziert für Mobile */
+        /* Dynamische Bauchbinde */
         #tag {
             position: absolute; bottom: 25%; left: 0; z-index: 200;
             background: linear-gradient(90deg, var(--viva-cyan), var(--viva-pink));
-            color: white; padding: 10px 30px; box-shadow: 6px 6px 0px #000;
-            transform: translateX(-105%); transition: transform 0.5s ease;
+            color: white; padding: 12px 35px; box-shadow: 8px 8px 0px #000;
+            transform: translateX(-105%); transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            max-width: 80%;
         }
         #tag.show { transform: translateX(0); }
 
-        /* Steuerung - Höher gerückt wegen Browserleiste */
-        #controls {
-            position: absolute; bottom: 80px; width: 100%; z-index: 300;
-            display: flex; justify-content: center;
-        }
+        /* Steuerung */
+        #controls { position: absolute; bottom: 80px; width: 100%; z-index: 300; display: flex; justify-content: center; }
         .zap-btn { 
             background: rgba(0,0,0,0.6); border: 2px solid #fff; color: #fff; 
             padding: 15px 40px; font-weight: bold; border-radius: 50px; 
-            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            text-transform: uppercase; letter-spacing: 1px;
         }
 
+        /* Power-On */
         #overlay {
-            position: fixed; inset: 0; background: #000; z-index: 1000; 
+            position: fixed; inset: 0; background: #111; z-index: 1000; 
             display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer;
         }
     </style>
@@ -50,91 +48,29 @@
 <body>
 
 <div id="overlay" onclick="powerOn()">
-    <div style="font-size: 50px; font-weight: 900; color: var(--viva-pink); border: 8px solid var(--viva-pink); padding: 15px 30px;">VIVA</div>
-    <p style="color: #fff; margin-top: 20px; letter-spacing: 3px; font-size: 12px;">TOUCH TO START</p>
+    <div style="font-size: 55px; font-weight: 900; color: var(--viva-pink); border: 10px solid var(--viva-pink); padding: 20px 40px;">VIVA</div>
+    <p style="color: #fff; margin-top: 25px; letter-spacing: 5px; font-size: 14px;">ZUM EINSCHALTEN TIPPEN</p>
 </div>
 
 <div id="screen">
     <div id="viva-clock">00:00</div>
-    <div id="viva-logo"><div class="v-block">V</div><div class="v-block">I</div><div class="v-block">V</div><div class="v-block">A</div></div>
+    <div id="viva-logo">
+        <div class="v-block">V</div><div class="v-block">I</div><div class="v-block">V</div><div class="v-block">A</div>
+    </div>
     
     <div id="player-wrapper"><div id="player"></div></div>
     
     <div id="tag">
-        <div id="meta-artist" style="font-size: 12px; opacity: 0.9;"></div>
-        <div id="meta-title" style="font-size: 20px; text-transform: uppercase;"></div>
+        <div style="font-size: 11px; opacity: 0.8; margin-bottom: 2px;">VIVA REWIND:</div>
+        <div id="video-title" style="font-size: 18px; line-height: 1.2;">LADE TITEL...</div>
     </div>
 
     <div id="controls">
-        <button class="zap-btn" onclick="zap()">NÄCHSTER CLIP</button>
+        <button class="zap-btn" onclick="zap()">NÄCHSTER CLIP (ZAPPEN)</button>
     </div>
 </div>
 
 <script>
-    // Erweiterte Datenbank mit korrekten Zuordnungen
-    const playlist = [
-        {id: "z5od8_Gp1ig", artist: "VIVA", title: "Ident 1996"},
-        {id: "8mQB566S78k", artist: "Blümchen", title: "Herz an Herz"},
-        {id: "P5uS6S_PqH0", artist: "Culture Beat", title: "Mr. Vain"},
-        {id: "mD2M0I9Cip4", artist: "Die Fantastischen Vier", title: "Die Da?!"},
-        {id: "uVjRe8QXFHY", artist: "Scooter", title: "Hyper Hyper"},
-        {id: "4wSr7h_pjxs", artist: "Snap!", title: "Rhythm is a Dancer"},
-        {id: "p3l7fgvrEKM", artist: "Marusha", title: "Somewhere Over The Rainbow"},
-        {id: "6M6samPEMpM", artist: "Captain Jack", title: "Captain Jack"},
-        {id: "1H39p6_8YvY", artist: "Mr. President", title: "Coco Jamboo"},
-        {id: "Bij_ttM_9ug", artist: "Tic Tac Toe", title: "Spiegel"},
-        {id: "TeF7qYRnAZA", artist: "Supa Richie", title: "Richie"},
-        {id: "9m_V4B-nB2w", artist: "Mo-Do", title: "Eins Zwei Polizei"},
-        {id: "nI_MVldpxmY", artist: "Brooklyn Bounce", title: "The Theme"},
-        {id: "u_p6mFvG0_8", artist: "U96", title: "Das Boot"},
-        {id: "Lcy7g05AbC0", artist: "E-Rotic", title: "Fred Come to Bed"},
-        {id: "f_X9W67WAsM", artist: "20 Fingers", title: "Short Dick Man"},
-        {id: "S0unS-P8hG0", artist: "O-Zone", title: "Dragostea Din Tei"},
-        {id: "D2O_SSTC5eU", artist: "Vengaboys", title: "Boom Boom Boom"},
-        {id: "v9_oVvT8f8Q", artist: "Faithless", title: "Insomnia"}
-    ];
-
     let player;
-
-    function updateClock() {
-        const now = new Date();
-        document.getElementById('viva-clock').innerText = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-    }
-    setInterval(updateClock, 1000); updateClock();
-
-    function onYouTubeIframeAPIReady() {
-        player = new YT.Player('player', {
-            playerVars: { 'autoplay': 1, 'controls': 0, 'playsinline': 1, 'modestbranding': 1, 'iv_load_policy': 3 },
-            events: {
-                'onStateChange': (e) => { if (e.data === YT.PlayerState.ENDED) zap(); },
-                'onError': () => zap()
-            }
-        });
-    }
-
-    function powerOn() {
-        document.getElementById('overlay').style.display = 'none';
-        player.unMute();
-        zap();
-    }
-
-    function zap() {
-        const video = playlist[Math.floor(Math.random() * playlist.length)];
-        player.loadVideoById(video.id);
-        
-        const tag = document.getElementById('tag');
-        tag.classList.remove('show');
-        
-        if (video.artist !== "VIVA") {
-            document.getElementById('meta-artist').innerText = video.artist;
-            document.getElementById('meta-title').innerText = video.title;
-            setTimeout(() => {
-                tag.classList.add('show');
-                setTimeout(() => tag.classList.remove('show'), 7000);
-            }, 3000);
-        }
-    }
-</script>
-<script src="https://www.youtube.com/iframe_api"></script>
-</body>
-</html>
+    const playlistId = 'PLfYJatUfKgnlRa5IM0KI_
+    
