@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVA REWIND - RANDOM INTERMISSION</title>
+    <title>VIVA REWIND - STABLE DUAL</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
@@ -16,8 +16,8 @@
 </head>
 <body>
 
-<div id="status-box">Playlist-Modus: Aktiv</div>
-<div id="overlay" onclick="powerOn()"><h1 style="color:#ffff00">START VIVA</h1></div>
+<div id="status-box">SYSTEM STARTING...</div>
+<div id="overlay" onclick="powerOn()"><h1 style="color:#ffff00">VIVA STARTEN</h1></div>
 
 <div id="container-music" class="player-container"><div id="player-music"></div></div>
 <div id="container-inter" class="player-container"><div id="player-inter"></div></div>
@@ -29,27 +29,20 @@
     let mode = 'MUSIC';
     let isPreloading = false;
     let interReady = false;
-    let hasSwitchedBack = false;
+    let currentInterId = '';
     
-    // MUSIK PLAYLIST
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
-    
-    // DEINE EINSPIELER LISTE (Hier IDs hinzufügen)
-    const intermissionList = [
-        'h07xiwYGLvs', // Trenner 1
-        'VId6Vv9S9M0', // Trenner 2
-        '8-nO87p97v8'  // Trenner 3
-    ];
+    const intermissionList = ['h07xiwYGLvs', 'VId6Vv9S9M0', '8-nO87p97v8'];
 
     function onYouTubeIframeAPIReady() {
-        const commonVars = { autoplay: 0, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3, enablejsapi: 1 };
+        const commonVars = { autoplay: 0, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3, enablejsapi: 1, origin: window.location.origin };
 
         playerMusic = new YT.Player('player-music', {
             height: '100%', width: '100%',
             playerVars: commonVars,
             events: { 
                 'onStateChange': (e) => {
-                    if (e.data === YT.PlayerState.PLAYING) startWatchdog();
+                    if (e.data === YT.PlayerState.PLAYING) mode = 'MUSIC';
                     if (e.data === YT.PlayerState.ENDED && mode === 'MUSIC') zapToInter();
                 }
             }
@@ -60,13 +53,18 @@
             playerVars: commonVars,
             events: { 
                 'onStateChange': (e) => {
+                    // Wenn der Preload-Einspieler startet, sofort pausieren und "Ready" melden
                     if (e.data === YT.PlayerState.PLAYING && isPreloading) {
                         playerInter.pauseVideo();
                         isPreloading = false;
                         interReady = true;
-                        document.getElementById('status-box').innerText = "EINSPIELER VORGELADEN";
+                        document.getElementById('status-box').innerText = "EINSPIELER: BEREIT";
                     }
                     if (e.data === YT.PlayerState.ENDED && mode === 'INTER') zapToMusic();
+                },
+                'onError': () => { // Falls ein Einspieler nicht geladen werden kann
+                    interReady = true; // Notfall-Flag
+                    zapToMusic();
                 }
             }
         });
@@ -78,25 +76,25 @@
             if (mode === 'MUSIC' && playerMusic.getDuration) {
                 const timeLeft = playerMusic.getDuration() - playerMusic.getCurrentTime();
                 
-                // Preload eines ZUFÄLLIGEN Einspielers bei 45s
-                if (timeLeft <= 45 && !interReady && !isPreloading) {
+                // Preload: Wir starten ihn bei 40s Restzeit
+                if (timeLeft <= 40 && !interReady && !isPreloading) {
                     isPreloading = true;
-                    const randomId = intermissionList[Math.floor(Math.random() * intermissionList.length)];
-                    console.log("Preloading Random Intermission: " + randomId);
+                    currentInterId = intermissionList[Math.floor(Math.random() * intermissionList.length)];
                     playerInter.mute();
-                    playerInter.loadVideoById(randomId);
+                    playerInter.loadVideoById(currentInterId);
                 }
 
-                // Wechsel bei 3s
+                // 3 SEKUNDEN ÜBERGABE ZU EINSPIELER
                 if (timeLeft <= 3.0 && timeLeft > 0 && interReady) {
                     zapToInter();
                 }
-                document.getElementById('status-box').innerText = "SONG: " + Math.round(timeLeft) + "s | NEXT: " + (interReady ? "READY" : "WAIT");
+                document.getElementById('status-box').innerText = "SONG: " + Math.round(timeLeft) + "s | EINSPIELER: " + (interReady ? "READY" : "LOADING");
             }
 
             if (mode === 'INTER' && playerInter.getDuration) {
                 const timeLeftInter = playerInter.getDuration() - playerInter.getCurrentTime();
-                if (timeLeftInter <= 3.0 && timeLeftInter > 0 && !hasSwitchedBack) {
+                // 3 SEKUNDEN ÜBERGABE ZU MUSIK
+                if (timeLeftInter <= 3.0 && timeLeftInter > 0) {
                     zapToMusic();
                 }
             }
@@ -106,24 +104,18 @@
     function zapToInter() {
         if (mode === 'INTER') return;
         mode = 'INTER';
-        hasSwitchedBack = false;
-        
         document.getElementById('container-music').style.opacity = "0";
         document.getElementById('container-inter').classList.add('active');
-        
         playerInter.unMute();
         playerInter.playVideo();
-        
         setTimeout(() => playerMusic.stopVideo(), 500);
     }
 
     function zapToMusic() {
-        if (hasSwitchedBack) return;
-        hasSwitchedBack = true;
-        
+        if (mode === 'MUSIC') return;
         mode = 'MUSIC';
         interReady = false; 
-        isPreloading = false; 
+        isPreloading = false;
         
         document.getElementById('container-inter').classList.remove('active');
         document.getElementById('container-music').style.opacity = "1";
@@ -133,13 +125,13 @@
             listType: 'playlist',
             index: Math.floor(Math.random() * 50)
         });
-
         setTimeout(() => playerInter.stopVideo(), 500);
     }
 
     function powerOn() {
         document.getElementById('overlay').style.display = 'none';
         playerMusic.loadPlaylist({ list: musicPlaylistId, listType: 'playlist', index: Math.floor(Math.random() * 50) });
+        startWatchdog();
     }
 </script>
 </body>
