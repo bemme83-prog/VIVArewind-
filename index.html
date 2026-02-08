@@ -2,81 +2,76 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VIVA REWIND LIVE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>VIVA REWIND PRO</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+        :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; }
         
-        /* Das VIVA Logo (Reines CSS) */
-        #viva-logo {
-            position: absolute; top: 30px; right: 30px; z-index: 100;
-            display: flex; gap: 4px; opacity: 0.7; pointer-events: none;
-        }
-        .v-block { width: 22px; height: 32px; background: #fff; display: flex; align-items: center; justify-content: center; color: #000; font-size: 20px; font-weight: 900; }
+        /* 100dvh ist der Fix für mobile Browser-Leisten */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+        
+        #screen { position: relative; width: 100%; height: 100dvh; overflow: hidden; display: flex; align-items: center; justify-content: center; }
 
-        /* Die VIVA Uhrzeit (oben links) */
-        #viva-clock {
-            position: absolute; top: 35px; left: 35px; z-index: 100;
-            color: #fff; font-size: 24px; font-weight: bold; opacity: 0.8;
-            text-shadow: 2px 2px 4px #000; font-family: sans-serif;
-        }
+        /* VIVA Logo & Uhr */
+        #viva-logo { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; gap: 3px; opacity: 0.8; }
+        .v-block { width: 18px; height: 28px; background: #fff; display: flex; align-items: center; justify-content: center; color: #000; font-size: 16px; font-weight: 900; }
+        #viva-clock { position: absolute; top: 22px; left: 20px; z-index: 100; color: #fff; font-size: 20px; font-weight: bold; opacity: 0.8; }
 
-        /* TV Screen & Player */
-        #screen { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #000; }
-        #player-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        /* Player - Skalierung angepasst für 16:9 und 4:3 Mix */
+        #player-wrapper { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
         #player { width: 100%; height: 100%; transform: scale(1.4); }
 
-        /* Die berühmte Bauchbinde */
+        /* Bauchbinde - Höher platziert für Mobile */
         #tag {
-            position: absolute; bottom: 15%; left: 0; z-index: 200;
-            background: linear-gradient(90deg, #00ffff, #ff00ff);
-            color: white; padding: 12px 40px; box-shadow: 8px 8px 0px #000;
-            transform: translateX(-105%); transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            position: absolute; bottom: 25%; left: 0; z-index: 200;
+            background: linear-gradient(90deg, var(--viva-cyan), var(--viva-pink));
+            color: white; padding: 10px 30px; box-shadow: 6px 6px 0px #000;
+            transform: translateX(-105%); transition: transform 0.5s ease;
         }
         #tag.show { transform: translateX(0); }
 
-        /* Steuerung */
+        /* Steuerung - Höher gerückt wegen Browserleiste */
         #controls {
-            position: absolute; bottom: 0; width: 100%; height: 100px;
-            z-index: 300; display: flex; justify-content: center; align-items: center;
-            background: linear-gradient(transparent, rgba(0,0,0,0.8));
-            opacity: 0; transition: opacity 0.3s;
+            position: absolute; bottom: 80px; width: 100%; z-index: 300;
+            display: flex; justify-content: center;
         }
-        #screen:hover #controls, #screen:active #controls { opacity: 1; }
-        .zap-btn { background: none; border: 2px solid #fff; color: #fff; padding: 10px 30px; font-weight: bold; border-radius: 5px; cursor: pointer; text-transform: uppercase; }
+        .zap-btn { 
+            background: rgba(0,0,0,0.6); border: 2px solid #fff; color: #fff; 
+            padding: 15px 40px; font-weight: bold; border-radius: 50px; 
+            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+        }
 
-        /* Power-On Overlay */
         #overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #111; z-index: 1000; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; color: #ff00ff; cursor: pointer;
+            position: fixed; inset: 0; background: #000; z-index: 1000; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer;
         }
     </style>
 </head>
 <body>
 
 <div id="overlay" onclick="powerOn()">
-    <div style="font-size: 60px; font-weight: 900; border: 10px solid #ff00ff; padding: 20px 40px;">VIVA</div>
-    <p style="color: #fff; margin-top: 20px; letter-spacing: 5px;">ZUM EINSCHALTEN TIPPEN</p>
+    <div style="font-size: 50px; font-weight: 900; color: var(--viva-pink); border: 8px solid var(--viva-pink); padding: 15px 30px;">VIVA</div>
+    <p style="color: #fff; margin-top: 20px; letter-spacing: 3px; font-size: 12px;">TOUCH TO START</p>
 </div>
 
 <div id="screen">
     <div id="viva-clock">00:00</div>
-    <div id="viva-logo">
-        <div class="v-block">V</div><div class="v-block">I</div><div class="v-block">V</div><div class="v-block">A</div>
-    </div>
+    <div id="viva-logo"><div class="v-block">V</div><div class="v-block">I</div><div class="v-block">V</div><div class="v-block">A</div></div>
+    
     <div id="player-wrapper"><div id="player"></div></div>
+    
     <div id="tag">
-        <div id="meta-artist" style="font-size: 14px; opacity: 0.9;"></div>
-        <div id="meta-title" style="font-size: 24px; text-transform: uppercase;"></div>
+        <div id="meta-artist" style="font-size: 12px; opacity: 0.9;"></div>
+        <div id="meta-title" style="font-size: 20px; text-transform: uppercase;"></div>
     </div>
+
     <div id="controls">
-        <button class="zap-btn" onclick="zap()">NÄCHSTER CLIP (ZAPPEN)</button>
+        <button class="zap-btn" onclick="zap()">NÄCHSTER CLIP</button>
     </div>
 </div>
 
 <script>
-    // Integrierte Datenbank (Hits aus den deutschen VIVA-Charts 90s/00s)
+    // Erweiterte Datenbank mit korrekten Zuordnungen
     const playlist = [
         {id: "z5od8_Gp1ig", artist: "VIVA", title: "Ident 1996"},
         {id: "8mQB566S78k", artist: "Blümchen", title: "Herz an Herz"},
@@ -87,34 +82,32 @@
         {id: "p3l7fgvrEKM", artist: "Marusha", title: "Somewhere Over The Rainbow"},
         {id: "6M6samPEMpM", artist: "Captain Jack", title: "Captain Jack"},
         {id: "1H39p6_8YvY", artist: "Mr. President", title: "Coco Jamboo"},
-        {id: "TeF7qYRnAZA", artist: "Supa Richie", title: "Supa Richie"},
-        {id: "y85YXMBRASc", artist: "Westbam", title: "Hard Times"},
-        {id: "5KJ__06kyxs", artist: "Dune", title: "Can't Stop Raving"},
-        {id: "Oe3FG4EOgyU", artist: "Schnappi", title: "Das kleine Krokodil"},
-        {id: "F3J0iwwsq-w", artist: "Ramones", title: "Pet Sematary"},
-        {id: "Bij_ttM_9ug", artist: "Tic Tac Toe", title: "Spiegel"}
+        {id: "Bij_ttM_9ug", artist: "Tic Tac Toe", title: "Spiegel"},
+        {id: "TeF7qYRnAZA", artist: "Supa Richie", title: "Richie"},
+        {id: "9m_V4B-nB2w", artist: "Mo-Do", title: "Eins Zwei Polizei"},
+        {id: "nI_MVldpxmY", artist: "Brooklyn Bounce", title: "The Theme"},
+        {id: "u_p6mFvG0_8", artist: "U96", title: "Das Boot"},
+        {id: "Lcy7g05AbC0", artist: "E-Rotic", title: "Fred Come to Bed"},
+        {id: "f_X9W67WAsM", artist: "20 Fingers", title: "Short Dick Man"},
+        {id: "S0unS-P8hG0", artist: "O-Zone", title: "Dragostea Din Tei"},
+        {id: "D2O_SSTC5eU", artist: "Vengaboys", title: "Boom Boom Boom"},
+        {id: "v9_oVvT8f8Q", artist: "Faithless", title: "Insomnia"}
     ];
 
     let player;
 
-    // Authentische VIVA Uhr
     function updateClock() {
         const now = new Date();
-        const time = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-        document.getElementById('viva-clock').innerText = time;
+        document.getElementById('viva-clock').innerText = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
     }
-    setInterval(updateClock, 1000);
-    updateClock();
+    setInterval(updateClock, 1000); updateClock();
 
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('player', {
-            playerVars: { 
-                'autoplay': 1, 'controls': 0, 'playsinline': 1, 'rel': 0, 
-                'modestbranding': 1, 'iv_load_policy': 3 
-            },
+            playerVars: { 'autoplay': 1, 'controls': 0, 'playsinline': 1, 'modestbranding': 1, 'iv_load_policy': 3 },
             events: {
                 'onStateChange': (e) => { if (e.data === YT.PlayerState.ENDED) zap(); },
-                'onError': () => zap() // WICHTIG: Überspringt gesperrte Videos sofort!
+                'onError': () => zap()
             }
         });
     }
@@ -128,7 +121,7 @@
     function zap() {
         const video = playlist[Math.floor(Math.random() * playlist.length)];
         player.loadVideoById(video.id);
-
+        
         const tag = document.getElementById('tag');
         tag.classList.remove('show');
         
@@ -137,7 +130,7 @@
             document.getElementById('meta-title').innerText = video.title;
             setTimeout(() => {
                 tag.classList.add('show');
-                setTimeout(() => tag.classList.remove('show'), 8000);
+                setTimeout(() => tag.classList.remove('show'), 7000);
             }, 3000);
         }
     }
