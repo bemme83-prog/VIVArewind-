@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VIVA REWIND - 10s GAP</title>
+    <title>VIVA REWIND - HARD RESET</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; --logo-blau: #1a4a9e; --logo-gelb: #ffff00; --start-gelb: #FFEA00; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
-        #debug-timer { position: absolute; top: 80px; left: 30px; z-index: 500; color: #0f0; font-family: monospace; font-size: 16px; background: rgba(0,0,0,0.7); padding: 10px; border: 1px solid #0f0; }
+        #debug-timer { position: absolute; top: 80px; left: 30px; z-index: 500; color: #0f0; font-family: monospace; font-size: 14px; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #0f0; }
         #overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
         #build-stamp { position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.6); font-size: 14px; }
         #player-wrapper { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
@@ -18,12 +18,12 @@
 <body>
 
 <div id="overlay" onclick="powerOn()">
-    <h1 style="color:var(--start-gelb)">START 10s TEST</h1>
-    <div id="build-stamp">BUILD: 18:25 CET</div>
+    <h1 style="color:var(--start-gelb)">START RESET-MODE</h1>
+    <div id="build-stamp">BUILD: 18:40 CET</div>
 </div>
 
 <div id="screen">
-    <div id="debug-timer">Warte auf Signal...</div>
+    <div id="debug-timer">Initialisiere...</div>
     <div id="viva-clock">00:00</div>
     <div id="player-wrapper"><div id="player"></div></div>
 </div>
@@ -34,8 +34,10 @@
     let mode = 'MUSIC';
     let safetyTimer;
     let countdownInterval;
+    
+    // IDs für den harten Wechsel
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
-    const intermissionPlaylistId = 'PLQ7SWY9Xieg3hXzm58s84PRe53LttQbJl';
+    const intermissionId = 'h07xiwYGLvs'; // Wir nehmen erst mal eine feste ID zum Testen
 
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('player', {
@@ -48,8 +50,8 @@
 
     function onPlayerStateChange(event) {
         if (event.data === YT.PlayerState.PLAYING) {
-            // Wir warten 2 Sekunden, bis das Video stabil läuft, bevor wir die Zeit berechnen
-            setTimeout(updateTimerLogic, 2000);
+            // Starte Timer-Logik erst nach 3 Sekunden Stabilität
+            setTimeout(updateTimerLogic, 3000);
         }
     }
 
@@ -60,37 +62,37 @@
         const duration = player.getDuration();
         const currentTime = player.getCurrentTime();
         
-        // TEST: 10 Sekunden Puffer
-        let secondsLeft = Math.floor((duration - currentTime) - 10);
+        // TEST: 12 Sekunden Puffer, um YouTube zuvorzukommen
+        let secondsLeft = Math.floor((duration - currentTime) - 12);
 
         if (secondsLeft > 0) {
             countdownInterval = setInterval(() => {
                 secondsLeft--;
                 document.getElementById('debug-timer').innerText = 
-                    "STADIUM: " + mode + "\nTIMER FEUERT IN: " + secondsLeft + "s\nVIDEO GESAMT: " + Math.round(duration) + "s";
-                
-                if (secondsLeft <= 0) {
-                    clearInterval(countdownInterval);
-                }
+                    "AKTUELL: " + mode + "\nRESET IN: " + secondsLeft + "s\nDAUER: " + Math.round(duration) + "s";
+                if (secondsLeft <= 0) clearInterval(countdownInterval);
             }, 1000);
 
-            safetyTimer = setTimeout(handleTransition, secondsLeft * 1000);
-        } else {
-            document.getElementById('debug-timer').innerText = "FEHLER: Video zu kurz oder Timer verpasst!";
+            safetyTimer = setTimeout(forceResetSwitch, secondsLeft * 1000);
         }
     }
 
-    function handleTransition() {
-        mode = (mode === 'MUSIC') ? 'INTERMISSION' : 'MUSIC';
-        const list = (mode === 'MUSIC') ? musicPlaylistId : intermissionPlaylistId;
-        const range = (mode === 'MUSIC') ? 50 : 10;
-        
-        console.log("TIMER ABGELAUFEN! Lade Playlist: " + list);
-        player.loadPlaylist({
-            list: list,
-            listType: 'playlist',
-            index: Math.floor(Math.random() * range)
-        });
+    function forceResetSwitch() {
+        console.log("HARD RESET EXECUTION");
+        if (mode === 'MUSIC') {
+            mode = 'INTERMISSION';
+            // Wir laden das Video hart neu
+            player.stopVideo();
+            player.loadVideoById(intermissionId);
+        } else {
+            mode = 'MUSIC';
+            player.stopVideo();
+            player.loadPlaylist({
+                list: musicPlaylistId,
+                listType: 'playlist',
+                index: Math.floor(Math.random() * 50)
+            });
+        }
     }
 
     function powerOn() {
