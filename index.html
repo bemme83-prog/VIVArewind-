@@ -50,5 +50,75 @@
     <div id="viva-container-corner">
         <div id="viva-logo-corner">
             <svg class="logo-svg blau" viewBox="0 0 100 100"><path d="M15,25 L85,25 L50,85 Z"/></svg> 
-            <svg class="logo-svg gelb" style="margin-left:-10px;" viewBox="0 0 1
-                
+            <svg class="logo-svg gelb" style="margin-left:-10px;" viewBox="0 0 100 100"><path d="M15,75 L85,75 L50,15 Z"/></svg> 
+        </div>
+        <div class="rewind-text">rewind</div>
+    </div>
+    <div id="player-wrapper"><div id="player"></div></div>
+    <div id="tag"><div id="video-title" style="font-size: 18px;">VIVA...</div></div>
+</div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+    let player;
+    let mode = 'MUSIC';
+    let safetyTimer; 
+    const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
+    const intermissionPlaylistId = 'PLQ7SWY9Xieg3hXzm58s84PRe53LttQbJl';
+
+    function updateClocks() {
+        const now = new Date();
+        const h = now.getHours().toString().padStart(2, '0');
+        const m = now.getMinutes().toString().padStart(2, '0');
+        const s = now.getSeconds().toString().padStart(2, '0');
+        
+        // Uhrzeit auf Startbildschirm (mit Sekunden)
+        document.getElementById('startup-clock').innerText = h + ":" + m + ":" + s;
+        // Uhrzeit im TV-Eck (ohne Sekunden)
+        document.getElementById('viva-clock').innerText = h + ":" + m;
+    }
+
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('player', {
+            height: '100%', width: '100%',
+            host: 'https://www.youtube-nocookie.com',
+            playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, playsinline: 1, enablejsapi: 1 },
+            events: { 'onStateChange': onPlayerStateChange }
+        });
+    }
+
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            const duration = player.getDuration();
+            const timeToWait = (duration - player.getCurrentTime()) - 4;
+            clearTimeout(safetyTimer);
+            if (timeToWait > 0) {
+                safetyTimer = setTimeout(handleTransition, timeToWait * 1000);
+            }
+            if(mode === 'MUSIC') {
+                document.getElementById('video-title').innerText = player.getVideoData().title;
+                document.getElementById('tag').classList.add('show');
+                setTimeout(() => document.getElementById('tag').classList.remove('show'), 6000);
+            }
+        }
+    }
+
+    function handleTransition() {
+        clearTimeout(safetyTimer);
+        mode = (mode === 'MUSIC') ? 'INTERMISSION' : 'MUSIC';
+        const list = (mode === 'MUSIC') ? musicPlaylistId : intermissionPlaylistId;
+        const index = (mode === 'MUSIC') ? Math.floor(Math.random() * 50) : Math.floor(Math.random() * 10);
+        player.loadPlaylist({ list: list, listType: 'playlist', index: index });
+    }
+
+    function powerOn() {
+        document.getElementById('overlay').style.display = 'none';
+        player.unMute();
+        player.loadPlaylist({ list: musicPlaylistId, listType: 'playlist', index: Math.floor(Math.random() * 50) });
+    }
+
+    setInterval(updateClocks, 1000);
+    updateClocks();
+</script>
+</body>
+</html>
