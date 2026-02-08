@@ -2,35 +2,37 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVA REWIND - SINGLE VIDEO TEST</title>
+    <title>VIVA REWIND - DYNAMIC STABLE</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Arial Black', sans-serif; margin: 0; overflow: hidden; }
         #player-wrapper { position: absolute; inset: 0; pointer-events: none; }
         #overlay { position: fixed; inset: 0; z-index: 1000; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
-        #status-box { position: absolute; top: 80px; left: 30px; z-index: 2000; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #ff00ff; font-family: monospace; font-size: 16px; color: #0f0; }
+        #status-box { position: absolute; top: 80px; left: 30px; z-index: 2000; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #00ffff; font-family: monospace; font-size: 16px; color: #0f0; }
         #build-stamp { position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.4); font-size: 12px; }
+        #viva-clock { position: absolute; top: 32px; left: 30px; z-index: 100; color: #fff; font-size: 22px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="status-box">Bereit für Single-Video Test...</div>
+<div id="status-box">Warte auf Signal...</div>
 
 <div id="overlay" onclick="powerOn()">
-    <h1 style="color:#FFEA00">START SINGLE-TEST</h1>
-    <p>Musik: 15s | Einspieler: Single Video</p>
-    <div id="build-stamp">VERSION: 08.02.2026 - 19:15 CET</div>
+    <h1 style="color:#FFEA00">START DYNAMIC</h1>
+    <p>Musik: Dauer - 5s | Einspieler: Single Video</p>
+    <div id="build-stamp">VERSION: 08.02.2026 - 19:25 CET</div>
 </div>
 
+<div id="viva-clock">00:00</div>
 <div id="player-wrapper"><div id="player"></div></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
     let player;
     let mode = 'MUSIC';
-    let testTimer;
-    let countdown;
+    let safetyTimer;
+    let countdownInterval;
     const musicPlaylistId = 'PLfYJatUfKgnlRa5IM0KI_ll0UyhYItnU2';
-    const singleIntermissionId = 'h07xiwYGLvs'; // Dein Test-Video
+    const singleIntermissionId = 'h07xiwYGLvs'; 
 
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('player', {
@@ -42,50 +44,59 @@
     }
 
     function onPlayerStateChange(event) {
-        // Logik für Einspieler: Warte auf das echte Ende des Clips
+        // Wenn Einspieler zu Ende -> Zurück zur Musik-Playlist
         if (mode === 'INTERMISSION' && event.data === YT.PlayerState.ENDED) {
-            console.log("Einspieler-Clip beendet -> Zurück zur Musik");
             doSwitch();
         }
 
-        // Logik für Musik: Starte 15s Timer
+        // Wenn Musik spielt -> Berechne Timer (Dauer - 5s)
         if (mode === 'MUSIC' && event.data === YT.PlayerState.PLAYING) {
-            startFifteenSecondTimer();
+            startDynamicTimer();
         }
     }
 
-    function startFifteenSecondTimer() {
-        clearTimeout(testTimer);
-        clearInterval(countdown);
-        
-        let timeLeft = 15;
-        document.getElementById('status-box').innerText = "MUSIK-MODUS\nWECHSEL IN: " + timeLeft + "s";
+    function startDynamicTimer() {
+        clearTimeout(safetyTimer);
+        clearInterval(countdownInterval);
 
-        countdown = setInterval(() => {
-            timeLeft--;
-            document.getElementById('status-box').innerText = "MUSIK-MODUS\nWECHSEL IN: " + timeLeft + "s";
-            if (timeLeft <= 0) clearInterval(countdown);
+        // Wir warten 1 Sekunde, um sicherzugehen, dass duration geladen ist
+        setTimeout(() => {
+            const duration = player.getDuration();
+            const currentTime = player.getCurrentTime();
+            
+            // Ziel: 5 Sekunden vor Ende wechseln
+            let secondsUntilSwitch = Math.floor((duration - currentTime) - 5);
+
+            if (secondsUntilSwitch > 0) {
+                countdownInterval = setInterval(() => {
+                    secondsUntilSwitch--;
+                    document.getElementById('status-box').innerText = 
+                        "MODE: " + mode + "\nWECHSEL IN: " + secondsUntilSwitch + "s\nGESAMT: " + Math.round(duration) + "s";
+                    
+                    if (secondsUntilSwitch <= 0) {
+                        clearInterval(countdownInterval);
+                        doSwitch();
+                    }
+                }, 1000);
+
+                safetyTimer = setTimeout(doSwitch, secondsUntilSwitch * 1000);
+            }
         }, 1000);
-
-        testTimer = setTimeout(() => {
-            console.log("15s Musik vorbei -> Lade Single Video");
-            doSwitch();
-        }, 15000);
     }
 
     function doSwitch() {
-        clearTimeout(testTimer);
-        clearInterval(countdown);
+        clearTimeout(safetyTimer);
+        clearInterval(countdownInterval);
         
         if (mode === 'MUSIC') {
             mode = 'INTERMISSION';
-            document.getElementById('status-box').innerText = "LADE EINSPIELER-VIDEO...";
-            // Lade das einzelne Video direkt
+            document.getElementById('status-box').innerText = "ZAPPE ZUM EINSPIELER...";
+            // Wechsel zum einzelnen Video (funktioniert stabil!)
             player.loadVideoById(singleIntermissionId);
         } else {
             mode = 'MUSIC';
-            document.getElementById('status-box').innerText = "LADE MUSIK-PLAYLIST...";
-            // Zurück zur Playlist
+            document.getElementById('status-box').innerText = "ZAPPE ZUR MUSIK...";
+            // Zurück zur Playlist (funktioniert nach einem einzelnen Video meistens gut)
             player.loadPlaylist({
                 list: musicPlaylistId,
                 listType: 'playlist',
@@ -97,9 +108,13 @@
     function powerOn() {
         document.getElementById('overlay').style.display = 'none';
         player.unMute();
-        // Start mit Musik
         player.loadPlaylist({ list: musicPlaylistId, listType: 'playlist', index: Math.floor(Math.random() * 50) });
     }
+
+    setInterval(() => {
+        const n = new Date();
+        document.getElementById('viva-clock').innerText = n.getHours().toString().padStart(2, '0') + ":" + n.getMinutes().toString().padStart(2, '0');
+    }, 1000);
 </script>
 </body>
 </html>
