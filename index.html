@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVA REWIND - 2 MIN GAP</title>
+    <title>VIVA REWIND - 15s BUFFER</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Arial Black', sans-serif; margin: 0; overflow: hidden; }
         #player-wrapper { position: absolute; inset: 0; pointer-events: none; }
@@ -13,12 +13,12 @@
 </head>
 <body>
 
-<div id="status-box">Watchdog 2min...</div>
+<div id="status-box">Watchdog 15s...</div>
 
 <div id="overlay" onclick="powerOn()">
-    <h1 style="color:#FFEA00">START 2-MIN-TEST</h1>
-    <p>Wechsel bei: Dauer - 120s</p>
-    <div id="build-stamp">VERSION: 19:55 CET</div>
+    <h1 style="color:#FFEA00">START 15s TEST</h1>
+    <p>Limit: 15 Sekunden Restzeit</p>
+    <div id="build-stamp">VERSION: 19:58 CET</div>
 </div>
 
 <div id="player-wrapper"><div id="player"></div></div>
@@ -62,11 +62,11 @@
             if (duration > 0) {
                 const timeLeft = duration - currentTime;
                 document.getElementById('status-box').innerText = 
-                    "MODUS: " + mode + "\nRESTZEIT: " + Math.round(timeLeft) + "s\nLIMIT: 120s";
+                    "MODUS: " + mode + "\nRESTZEIT: " + Math.round(timeLeft) + "s\nLIMIT: 15s";
 
-                // Wechsel 2 Minuten vor Ende
-                if (mode === 'MUSIC' && timeLeft <= 120) {
-                    console.log("WATCHDOG: 120s erreicht! Wechsel jetzt.");
+                // Wechsel 15 Sekunden vor Ende
+                if (mode === 'MUSIC' && timeLeft <= 15) {
+                    console.log("WATCHDOG: 15s erreicht! Wechsel jetzt.");
                     doSwitch();
                 }
             }
@@ -78,6 +78,7 @@
         if (mode === 'MUSIC') {
             mode = 'INTERMISSION';
             document.getElementById('status-box').innerText = "ZAPPE ZUM EINSPIELER...";
+            // Wir nutzen loadVideoById, da es schneller anspricht als Playlists
             player.loadVideoById(singleIntermissionId);
         } else {
             mode = 'MUSIC';
