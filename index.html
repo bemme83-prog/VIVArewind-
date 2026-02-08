@@ -2,52 +2,55 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVArewind - Interactive</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIVArewind - LIVE</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
         #player-container { position: relative; width: 100vw; height: 100vh; background: #000; }
-        #player { width: 100%; height: 100%; pointer-events: none; }
+        #player { width: 100%; height: 100%; pointer-events: none; transform: scale(1.1); } /* Scale entfernt schwarze Ränder */
         
-        /* CRT Effect */
+        /* CRT Scanline Effekt */
         #player-container::after {
             content: " "; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-            background-size: 100% 3px; z-index: 5; pointer-events: none;
+            background-size: 100% 4px; z-index: 5; pointer-events: none;
         }
 
-        #viva-logo { position: absolute; top: 30px; right: 40px; width: 100px; z-index: 10; opacity: 0.6; }
+        #viva-logo { position: absolute; top: 30px; right: 40px; width: 110px; z-index: 10; opacity: 0.6; filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); }
         
+        /* Die VIVA Bauchbinde */
         #song-info {
             position: absolute; bottom: 12%; left: 5%; background: linear-gradient(90deg, #ff00ff, #00ffff);
-            color: white; padding: 12px 30px; font-weight: bold; text-transform: uppercase; font-style: italic;
-            box-shadow: 8px 8px 0px #000; z-index: 20; display: none;
+            color: white; padding: 15px 35px; font-weight: bold; text-transform: uppercase; font-style: italic;
+            box-shadow: 10px 10px 0px #000; z-index: 20; display: none; animation: slideIn 0.5s ease-out;
         }
+        @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 
-        /* Steuerung (Remote Control) */
+        /* Steuerung dezent unten */
         #controls {
-            position: absolute; bottom: 0; width: 100%; height: 60px;
-            background: rgba(0,0,0,0.5); z-index: 30; display: flex;
-            justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s;
+            position: absolute; bottom: 0; width: 100%; height: 80px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8)); z-index: 30; 
+            display: flex; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s;
         }
         #controls:hover { opacity: 1; }
         .btn { 
-            background: #fff; color: #000; border: none; padding: 10px 20px; 
-            margin: 0 10px; cursor: pointer; font-weight: bold; border-radius: 5px;
+            background: rgba(255,255,255,0.2); color: white; border: 2px solid white; padding: 10px 25px; 
+            margin: 0 15px; cursor: pointer; font-weight: bold; border-radius: 50px; text-transform: uppercase;
         }
-        .btn:hover { background: #ff00ff; color: white; }
+        .btn:hover { background: #ff00ff; border-color: #ff00ff; }
 
         #start-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 100; display: flex; justify-content: center; align-items: center; cursor: pointer; color: white;
+            background: #000; z-index: 100; display: flex; justify-content: center; align-items: center; cursor: pointer;
         }
     </style>
 </head>
 <body>
 
 <div id="start-overlay" onclick="startTV()">
-    <div style="text-align: center;">
-        <h1 style="color: #ff00ff;">VIVA REWIND</h1>
-        <p>KLICKEN ZUM EINSCHALTEN</p>
+    <div style="text-align: center; color: white;">
+        <h1 style="font-size: 50px; color: #ff00ff; margin: 0;">VIVA REWIND</h1>
+        <p style="letter-spacing: 5px;">KLICKEN ZUM EINSCHALTEN</p>
     </div>
 </div>
 
@@ -56,43 +59,48 @@
     <img id="viva-logo" src="https://upload.wikimedia.org/wikipedia/commons/e/e3/VIVA_Logo.svg">
     
     <div id="song-info">
-        <p id="track-artist" style="margin:0;"></p>
-        <h2 id="track-title" style="margin:0;"></h2>
+        <p id="track-artist" style="margin:0; font-size: 18px; opacity: 0.9;"></p>
+        <h2 id="track-title" style="margin:0; font-size: 28px;"></h2>
     </div>
 
     <div id="controls">
-        <button class="btn" onclick="playPrevious()">BACK</button>
-        <button class="btn" onclick="playNext()">SKIP</button>
+        <button class="btn" onclick="playPrevious()">◀ ZURÜCK</button>
+        <button class="btn" onclick="playNext()">SKIP ▶</button>
     </div>
 </div>
 
 <script>
-    let musicVideos = [
-        { id: '_T9Y0o4R_qM', artist: 'Lucilectric', title: 'Mädchen' },
-        { id: 'mD2M0I9Cip4', artist: 'Die Fantastischen Vier', title: 'Die Da' }
-    ];
-    let history = []; // Speicher für "Zurück"
+    let musicVideos = [];
+    let history = []; 
     let currentVideo = null;
     let player;
 
-    async function loadHybridDB() {
+    // Lädt deine hunderte Songs aus der musicVideos.json
+    async function loadDatabase() {
         try {
             const res = await fetch('musicVideos.json');
             if(res.ok) {
-                const data = await res.json();
-                musicVideos = data;
-                console.log("Hybrid-DB geladen!");
+                musicVideos = await res.json();
+                console.log(musicVideos.length + " Songs geladen.");
             }
-        } catch(e) { console.log("Nutze interne Liste."); }
+        } catch(e) {
+            console.error("Datenbank konnte nicht geladen werden.");
+        }
     }
 
     function startTV() {
         document.getElementById('start-overlay').style.display = 'none';
-        if (player) { player.unMute(); player.playVideo(); }
+        if (player) {
+            player.unMute();
+            player.playVideo();
+        }
     }
 
     function playNext() {
-        if(currentVideo) history.push(currentVideo);
+        if (currentVideo) history.push(currentVideo);
+        if (history.length > 20) history.shift(); // History begrenzen
+        
+        // Zufälliges Video aus der Liste wählen
         const next = musicVideos[Math.floor(Math.random() * musicVideos.length)];
         currentVideo = next;
         updatePlayer(next);
@@ -110,29 +118,26 @@
         if (!player) return;
         player.loadVideoById(video.id);
         
-        // Bauchbinde
+        // Bauchbinde anzeigen
         const info = document.getElementById('song-info');
-        document.getElementById('track-artist').innerText = video.artist;
-        document.getElementById('track-title').innerText = video.title;
-        info.style.display = 'block';
-        setTimeout(() => info.style.display = 'none', 7000);
+        if (video.artist !== "VIVA") {
+            document.getElementById('track-artist').innerText = video.artist;
+            document.getElementById('track-title').innerText = video.title;
+            // 2 Sekunden warten vor Einblendung (wie im echten TV)
+            setTimeout(() => {
+                info.style.display = 'block';
+                setTimeout(() => { info.style.display = 'none'; }, 8000);
+            }, 2000);
+        } else {
+            info.style.display = 'none';
+        }
     }
 
     function onYouTubeIframeAPIReady() {
-        loadHybridDB().then(() => {
+        loadDatabase().then(() => {
             player = new YT.Player('player', {
                 height: '100%', width: '100%',
                 videoId: musicVideos[0].id,
-                playerVars: { 'autoplay': 1, 'controls': 0, 'mute': 1 },
-                events: {
-                    'onReady': (e) => { currentVideo = musicVideos[0]; e.target.playVideo(); },
-                    'onStateChange': (e) => { if (e.data === YT.PlayerState.ENDED) playNext(); },
-                    'onError': () => playNext()
-                }
-            });
-        });
-    }
-</script>
-<script src="https://www.youtube.com/iframe_api"></script>
-</body>
-</html>
+                playerVars: { 
+                    'autoplay
+                        
