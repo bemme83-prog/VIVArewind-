@@ -3,29 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIVA REWIND - START CONTROL</title>
+    <title>VIVA REWIND - STABILITY 20:45</title>
     <style>
-        :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
         
-        /* Startbildschirm */
         #overlay { 
             position: fixed; inset: 0; z-index: 9999; 
-            background: radial-gradient(circle, #1a4a9e 0%, #000 100%); 
-            display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            cursor: pointer; color: white; text-align: center;
+            background: #1a4a9e; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; cursor: pointer; color: white; 
         }
         .viva-btn { 
-            padding: 30px 60px; border: 6px solid #ffff00; 
-            font-size: 32px; color: #ffff00; text-transform: uppercase;
-            box-shadow: 10px 10px 0px #000; transition: transform 0.1s;
+            padding: 25px 50px; border: 4px solid #ffff00; color: #ffff00;
+            font-size: 28px; font-weight: bold; text-transform: uppercase; 
         }
-        .viva-btn:active { transform: scale(0.95); }
 
-        #player-container { position: absolute; inset: 0; z-index: 1; }
-        #status-box { position: absolute; top: 20px; right: 20px; z-index: 2000; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; font-family: monospace; border: 1px solid #0f0; }
-        
-        /* TV Design */
+        #player-wrapper { position: absolute; inset: 0; z-index: 1; }
+        #status-box { 
+            position: absolute; top: 20px; right: 20px; z-index: 2000; 
+            background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; 
+            font-family: monospace; border: 1px solid #0f0; font-size: 12px;
+        }
         #viva-clock { position: absolute; top: 32px; left: 30px; z-index: 100; color: #fff; font-size: 22px; font-weight: bold; }
     </style>
 </head>
@@ -33,12 +30,14 @@
 
 <div id="overlay" onclick="powerOn()">
     <div class="viva-btn">VIVA STARTEN</div>
-    <p style="margin-top:25px; font-family:sans-serif; letter-spacing:2px;">Klicke zum Initialisieren</p>
 </div>
 
-<div id="status-box">Bereit...</div>
+<div id="status-box">Warte auf Klick...</div>
 <div id="viva-clock">00:00</div>
-<div id="player-container"><div id="player"></div></div>
+
+<div id="player-wrapper">
+    <div id="player-anchor"></div>
+</div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
@@ -49,26 +48,20 @@
     const singleIntermissionId = 'h07xiwYGLvs';
 
     function onYouTubeIframeAPIReady() {
-        console.log("API Ready");
-        document.getElementById('status-box').innerText = "API GELADEN";
+        document.getElementById('status-box').innerText = "API BEREIT";
     }
 
     function createPlayer(videoId, isPlaylist = false) {
-        document.getElementById('status-box').innerText = "INITIALISIERE PLAYER...";
-        
-        // Falls schon ein Player existiert, zerstören wir ihn sauber
-        if (player && player.destroy) {
-            player.destroy();
-        }
+        const status = document.getElementById('status-box');
+        status.innerText = "LADE " + mode + "...";
+
+        // Altes Player-Element komplett entfernen und neu setzen
+        const wrapper = document.getElementById('player-wrapper');
+        wrapper.innerHTML = '<div id="player-anchor"></div>';
 
         const playerVars = {
-            autoplay: 1, 
-            controls: 0, 
-            modestbranding: 1, 
-            rel: 0, 
-            playsinline: 1, 
-            enablejsapi: 1,
-            origin: window.location.origin
+            autoplay: 1, controls: 0, modestbranding: 1, rel: 0, 
+            playsinline: 1, enablejsapi: 1, iv_load_policy: 3
         };
 
         if (isPlaylist) {
@@ -76,24 +69,33 @@
             playerVars.list = videoId;
         }
 
-        player = new YT.Player('player', {
-            height: '100%', width: '100%',
-            videoId: isPlaylist ? null : videoId,
-            playerVars: playerVars,
-            events: {
-                'onReady': (e) => {
-                    e.target.unMute();
-                    if (isPlaylist) {
-                        e.target.setShuffle(true);
-                        e.target.playVideoAt(Math.floor(Math.random() * 50));
-                    } else {
-                        e.target.playVideo();
+        try {
+            player = new YT.Player('player-anchor', {
+                height: '100%', width: '100%',
+                videoId: isPlaylist ? null : videoId,
+                playerVars: playerVars,
+                events: {
+                    'onReady': (e) => {
+                        e.target.unMute();
+                        if (isPlaylist) {
+                            // Zufälliger Start in der Playlist
+                            const randomIndex = Math.floor(Math.random() * 40);
+                            e.target.playVideoAt(randomIndex);
+                        } else {
+                            e.target.playVideo();
+                        }
+                        status.innerText = "WIEDERGABE: " + mode;
+                    },
+                    'onStateChange': onPlayerStateChange,
+                    'onError': (e) => {
+                        status.innerText = "FEHLER - REBOOT...";
+                        setTimeout(() => createPlayer(musicPlaylistId, true), 2000);
                     }
-                    document.getElementById('status-box').innerText = "PLAYER READY (" + mode + ")";
-                },
-                'onStateChange': onPlayerStateChange
-            }
-        });
+                }
+            });
+        } catch (e) {
+            status.innerText = "CRITICAL ERROR. REFRESH.";
+        }
     }
 
     function onPlayerStateChange(event) {
@@ -101,7 +103,6 @@
             mode = 'MUSIC';
             createPlayer(musicPlaylistId, true);
         }
-        
         if (event.data === YT.PlayerState.PLAYING) {
             startWatchdog();
         }
@@ -110,14 +111,14 @@
     function startWatchdog() {
         clearInterval(watchdog);
         watchdog = setInterval(() => {
-            if (mode === 'MUSIC' && player && player.getDuration) {
+            if (mode === 'MUSIC' && player && typeof player.getDuration === 'function') {
                 const duration = player.getDuration();
                 const currentTime = player.getCurrentTime();
                 if (duration > 0) {
                     const timeLeft = duration - currentTime;
                     document.getElementById('status-box').innerText = "RESTZEIT: " + Math.round(timeLeft) + "s";
                     
-                    // Wir testen 25 Sekunden für den Hard-Reset
+                    // Bei 25 Sekunden Restzeit erfolgt der harte Wechsel
                     if (timeLeft <= 25 && timeLeft > 0) {
                         clearInterval(watchdog);
                         mode = 'INTERMISSION';
