@@ -3,136 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VIVA REWIND PRO</title>
+    <title>VIVA REWIND</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
         
-        #tv-wrapper { position: relative; width: 100vw; height: 100vh; background: #000; display: flex; align-items: center; justify-content: center; }
-        
-        /* YouTube Container - MTVrewind Scale */
-        .video-container { position: relative; width: 100%; height: 100%; overflow: hidden; }
-        #player { position: absolute; top: 50%; left: 50%; width: 100vw; height: 56.25vw; min-height: 100vh; min-width: 177.77vh; transform: translate(-50%, -50%); }
-
-        /* VIVA LOGO - Absolute Priorität */
+        /* Das VIVA LOGO aus reinem CSS */
         #viva-logo {
-            position: absolute; top: 40px; right: 40px; width: 100px;
-            z-index: 9999; pointer-events: none;
-            filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
+            position: absolute; top: 30px; right: 30px; z-index: 100;
+            display: flex; gap: 4px; opacity: 0.8; pointer-events: none;
+        }
+        .v-block {
+            width: 25px; height: 35px; background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            color: #000; font-size: 24px; font-weight: 900;
         }
 
-        /* Bauchbinde */
-        #infobox {
-            position: absolute; bottom: 12%; left: 0; z-index: 9000;
-            background: linear-gradient(90deg, #ff00ff, #00ffff);
-            padding: 15px 40px; color: white; box-shadow: 8px 8px 0px #000;
-            display: none; text-transform: uppercase; font-style: italic;
-            animation: slideIn 0.5s ease-out;
-        }
-        @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        /* TV Screen & Player */
+        #screen { position: relative; width: 100vw; height: 100vh; background: #000; }
+        #player-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #player { width: 100%; height: 100%; transform: scale(1.4); }
 
-        /* Steuerung - Immer sichtbar am Handy unten */
+        /* Bauchbinde (VIVA Style) */
+        #tag {
+            position: absolute; bottom: 15%; left: 0; z-index: 200;
+            background: linear-gradient(90deg, #00ffff, #ff00ff);
+            color: white; padding: 10px 40px; box-shadow: 10px 10px 0px #000;
+            transform: translateX(-105%); transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        #tag.show { transform: translateX(0); }
+
+        /* Steuerung */
         #controls {
-            position: absolute; bottom: 20px; width: 100%; z-index: 10000;
-            display: flex; justify-content: space-around; padding: 0 20px; box-sizing: border-box;
+            position: absolute; bottom: 0; width: 100%; height: 100px;
+            z-index: 300; display: flex; justify-content: center; align-items: center;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            opacity: 0; transition: opacity 0.3s;
         }
-        .btn { 
-            background: rgba(255,255,255,0.2); border: 2px solid #fff; color: #fff;
-            padding: 12px 25px; border-radius: 30px; font-weight: bold; 
-            text-shadow: 1px 1px 2px #000; backdrop-filter: blur(5px);
+        #screen:hover #controls, #screen:active #controls { opacity: 1; }
+        .zap-btn {
+            background: none; border: 2px solid #fff; color: #fff; padding: 10px 30px;
+            font-size: 14px; font-weight: bold; border-radius: 5px; cursor: pointer;
         }
 
-        /* Startbildschirm */
-        #overlay {
+        /* Start-Vorhang */
+        #curtain {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 20000; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; cursor: pointer; color: #ff00ff;
+            background: #000; z-index: 1000; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: #ff00ff; cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-<div id="overlay" onclick="startApp()">
-    <div style="border: 8px solid #ff00ff; padding: 40px; border-radius: 20px;">
-        <h1 style="font-size: 60px; margin: 0;">VIVA</h1>
-    </div>
-    <p style="color: #fff; margin-top: 20px; letter-spacing: 5px;">KLICKEN ZUM STARTEN</p>
+<div id="curtain" onclick="powerOn()">
+    <div style="font-size: 60px; font-weight: 900; letter-spacing: -5px;">VIVA</div>
+    <div style="color: #fff; letter-spacing: 4px; font-size: 12px; margin-top: 10px;">REWIND</div>
 </div>
 
-<div id="tv-wrapper">
-    <div class="video-container">
-        <div id="player"></div>
+<div id="screen">
+    <div id="viva-logo">
+        <div class="v-block">V</div><div class="v-block">I</div>
+        <div class="v-block">V</div><div class="v-block">A</div>
     </div>
-    
-    <img id="viva-logo" src="https://upload.wikimedia.org/wikipedia/commons/e/e3/VIVA_Logo.svg">
 
-    <div id="infobox">
-        <div id="artist-name" style="font-size: 14px; opacity: 0.8;"></div>
-        <div id="song-name" style="font-size: 24px;"></div>
+    <div id="player-wrapper"><div id="player"></div></div>
+
+    <div id="tag">
+        <div id="meta-artist" style="font-size: 14px; opacity: 0.9;"></div>
+        <div id="meta-title" style="font-size: 24px; text-transform: uppercase;"></div>
     </div>
 
     <div id="controls">
-        <button class="btn" onclick="zapVideo()">NÄCHSTER CLIP ▶</button>
+        <button class="zap-btn" onclick="zap()">NÄCHSTER CLIP (ZAPPEN)</button>
     </div>
 </div>
 
 <script>
     let player;
     let playlist = [];
-    let currentId = 0;
+    let isReady = false;
 
-    // JSON Laden mit Cache-Breaker (wichtig für GitHub)
-    async function loadMusicData() {
+    // Wir laden die JSON direkt
+    async function initData() {
         try {
-            const r = await fetch('musicVideos.json?v=' + Date.now());
+            const r = await fetch('musicVideos.json');
             playlist = await r.json();
-            console.log("Videos geladen: " + playlist.length);
+            isReady = true;
         } catch (e) {
-            console.error("JSON Error");
-            playlist = [{id: "z5od8_Gp1ig", artist: "VIVA", title: "Ident"}];
+            console.error("Datenfehler");
+            // Notfall-Liste falls JSON klemmt
+            playlist = [
+                {id: "mD2M0I9Cip4", artist: "Die Fantastischen Vier", title: "Die Da?!"},
+                {id: "8mQB566S78k", artist: "Blümchen", title: "Herz an Herz"}
+            ];
         }
     }
 
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('player', {
-            playerVars: {
-                'autoplay': 0,
-                'controls': 0, // Wir nutzen unsere eigenen Buttons
-                'modestbranding': 1,
-                'rel': 0,
-                'playsinline': 1,
-                'iv_load_policy': 3
-            },
+            playerVars: { 'autoplay': 1, 'controls': 0, 'playsinline': 1, 'rel': 0, 'disablekb': 1 },
             events: {
-                'onStateChange': (e) => { if (e.data === YT.PlayerState.ENDED) zapVideo(); }
+                'onReady': () => initData(),
+                'onStateChange': (e) => { 
+                    if (e.data === YT.PlayerState.ENDED) zap(); 
+                },
+                'onError': () => zap() // WICHTIG: Überspringt "Video nicht verfügbar" automatisch!
             }
         });
     }
 
-    function startApp() {
-        document.getElementById('overlay').style.display = 'none';
-        loadMusicData().then(() => {
-            zapVideo();
-        });
+    function powerOn() {
+        document.getElementById('curtain').style.display = 'none';
+        player.unMute();
+        zap();
     }
 
-    function zapVideo() {
-        if (!playlist.length) return;
+    function zap() {
+        if (playlist.length === 0) return;
         
-        // Zufälliges Video
         const video = playlist[Math.floor(Math.random() * playlist.length)];
-        
         player.loadVideoById(video.id);
-        player.playVideo();
-        player.unMute();
-
-        // Bauchbinde Logik
-        const info = document.getElementById('infobox');
+        
+        // Bauchbinde Info
+        const tag = document.getElementById('tag');
+        tag.classList.remove('show');
+        
         if (video.artist !== "VIVA") {
-            document.getElementById('artist-name').innerText = video.artist;
-            document.getElementById('song-name').innerText = video.title;
+            document.getElementById('meta-artist').innerText = video.artist;
+            document.getElementById('meta-title').innerText = video.title;
+            
             setTimeout(() => {
-                info.style.display = 'block';
-                setTimeout(() => { info.style.display = 'none'; }, 7000);
+                tag.classList.add('show');
+                setTimeout(() => tag.classList.remove('show'), 8000);
             }, 3000);
         }
     }
