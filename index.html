@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VIVA REWIND - BUILD 17:15</title>
+    <title>VIVA REWIND - 30s TEST</title>
     <style>
         :root { --viva-pink: #ff00ff; --viva-cyan: #00ffff; --logo-blau: #1a4a9e; --logo-gelb: #ffff00; --start-gelb: #FFEA00; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
@@ -15,12 +15,9 @@
             cursor: pointer; 
         }
         #start-text { color: var(--start-gelb); font-size: 40px; font-weight: 900; animation: pulse 1.5s infinite alternate; }
-        
-        /* DEIN ZEITSTEMPEL FÜR DIE KONTROLLE */
         #build-stamp { 
             position: absolute; bottom: 20px; right: 20px; 
-            color: rgba(255,255,255,0.4); font-family: sans-serif; font-size: 12px; 
-            letter-spacing: 1px;
+            color: rgba(255,255,255,0.6); font-family: sans-serif; font-size: 14px; font-weight: bold;
         }
 
         /* TV Interface */
@@ -45,8 +42,8 @@
         <svg class="logo-svg blau" style="width:60px; height:60px; stroke-width:15;" viewBox="0 0 100 100"><path d="M15,25 L85,25 L50,85 Z"/></svg> 
         <svg class="logo-svg gelb" style="width:60px; height:60px; stroke-width:15; margin-left:-15px;" viewBox="0 0 100 100"><path d="M15,75 L85,75 L50,15 Z"/></svg> 
     </div>
-    <div id="start-text">START</div>
-    <div id="build-stamp">VERSION: 08.02.2026 - 17:15 CET</div>
+    <div id="start-text">START TEST (30s)</div>
+    <div id="build-stamp">BUILD: 17:25 CET</div>
 </div>
 
 <div id="screen">
@@ -81,15 +78,10 @@
 
     function onPlayerStateChange(event) {
         if (event.data === YT.PlayerState.PLAYING) {
-            // Timer-Berechnung: Dauer minus 4 Sekunden Sicherheit
-            const duration = player.getDuration();
-            const timeToWait = (duration - player.getCurrentTime()) - 4;
-            
+            // TEST-MODUS: Wir erzwingen den Wechsel nach exakt 30 Sekunden
+            console.log("Video gestartet. Wechsel in 30 Sekunden...");
             clearTimeout(safetyTimer);
-            if (timeToWait > 0) {
-                console.log("Wechsel in " + timeToWait + "s geplant.");
-                safetyTimer = setTimeout(handleTransition, timeToWait * 1000);
-            }
+            safetyTimer = setTimeout(handleTransition, 30000); 
 
             if(mode === 'MUSIC') {
                 document.getElementById('video-title').innerText = player.getVideoData().title;
@@ -97,16 +89,13 @@
                 setTimeout(() => document.getElementById('tag').classList.remove('show'), 6000);
             }
         }
-        
-        // Backup: Falls der Video-End-Status doch durchkommt
-        if (event.data === YT.PlayerState.ENDED) {
-            handleTransition();
-        }
     }
 
     function handleTransition() {
         clearTimeout(safetyTimer);
         mode = (mode === 'MUSIC') ? 'INTERMISSION' : 'MUSIC';
+        
+        console.log("Erzwungener Wechsel zu: " + mode);
         
         const list = (mode === 'MUSIC') ? musicPlaylistId : intermissionPlaylistId;
         const range = (mode === 'MUSIC') ? 50 : 10;
@@ -134,4 +123,5 @@
     }, 1000);
 </script>
 </body>
-</html>
+    </html>
+    
