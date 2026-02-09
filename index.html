@@ -2,11 +2,11 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>VIVA REWIND - FINAL LOGO EDITION</title>
+    <title>VIVA REWIND - MASTER BUILD v2</title>
     <style>
         :root { 
             --viva-blue: #1a4a9e; 
-            --viva-yellow: #ffff00; /* Quietscheentchen-Gelb */
+            --viva-yellow: #ffff00; 
             --viva-pink: #ff00ff;
             --viva-dark: #0d2b5e;
         }
@@ -23,54 +23,60 @@
             background: radial-gradient(circle, #fff 0%, var(--viva-blue) 40%, var(--viva-dark) 100%);
             display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; 
         }
-        .start-logo-wrap { transform: scale(1.8); }
-        .blink { animation: blinker 0.8s linear infinite; font-size: 60px; color: var(--viva-yellow); -webkit-text-stroke: 3px var(--viva-blue); margin-top: 60px; text-shadow: 5px 5px 0px var(--viva-pink); }
+        .start-logo-wrap { transform: scale(2.2); }
+        .blink { animation: blinker 0.8s linear infinite; font-size: 60px; color: var(--viva-yellow); -webkit-text-stroke: 3px var(--viva-blue); margin-top: 80px; text-shadow: 5px 5px 0px var(--viva-pink); }
         @keyframes blinker { 50% { opacity: 0; } }
 
-        /* --- LOGO GEOMETRIE (BERÜHREND) --- */
+        /* --- LOGO GEOMETRIE (Dünner & Berührend) --- */
         .logo-box { display: flex; flex-direction: column; align-items: center; }
         .logo-row { display: flex; align-items: center; justify-content: center; }
         
-        .triangle-svg { width: 60px; height: 55px; margin-left: -18px; } /* Extremer Versatz für Berührung */
+        .triangle-svg { width: 65px; height: 60px; margin-left: -22px; } /* Enger zusammen */
         .triangle-svg:first-child { margin-left: 0; }
         
-        .t-shape { stroke-width: 12; stroke-linejoin: round; stroke-linecap: round; fill: none; }
+        .t-shape { stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; fill: none; } /* Dünnerer Rand */
         .t-blue { stroke: var(--viva-blue); }
-        .t-yellow-filled { stroke: var(--viva-blue); fill: var(--viva-yellow); } /* Blauem Rand + Gelbe Füllung */
+        .t-yellow-filled { stroke: var(--viva-blue); fill: var(--viva-yellow); } 
         
         .rewind-text { 
             font-style: italic; font-size: 28px; color: var(--viva-yellow); 
-            margin-top: -5px; font-weight: normal; letter-spacing: -1px; 
+            margin-top: -8px; font-weight: normal; letter-spacing: -1px; 
             text-shadow: 2px 2px 0px var(--viva-blue); 
         }
 
-        #viva-header { position: absolute; top: 40px; right: 40px; z-index: 100; transition: transform 0.3s; }
+        #viva-header { position: absolute; top: 40px; right: 40px; z-index: 100; transition: all 0.4s; }
 
-        /* UI Elemente */
-        #viva-clock { position: absolute; top: 30px; left: 30px; z-index: 100; font-size: 42px; color: var(--viva-yellow); text-shadow: 4px 4px 0px var(--viva-blue); }
+        /* Uhrzeit */
+        #viva-clock { 
+            position: absolute; top: 30px; left: 30px; z-index: 100; 
+            font-size: 42px; color: var(--viva-yellow); 
+            text-shadow: 4px 4px 0px var(--viva-blue); transition: all 0.4s;
+        }
         
+        /* Info-Tag */
         #tag { 
             position: absolute; bottom: 22%; left: 0; z-index: 200; 
             background: var(--viva-yellow); color: var(--viva-blue); 
             padding: 25px 60px; border: 8px solid var(--viva-blue);
             box-shadow: 12px 12px 0px var(--viva-pink);
-            transform: translateX(-110%); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            transform: translateX(-110%); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), all 0.4s; 
         }
         #tag.show { transform: translateX(0); }
         #video-title { font-size: 32px; font-weight: 900; text-transform: uppercase; line-height: 1; }
 
+        /* Steuerung */
         .viva-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; gap: 15px; transition: opacity 0.5s; opacity: 0; }
         .viva-controls.visible { opacity: 1; }
         .control-btn { background: var(--viva-blue); border: 4px solid var(--viva-yellow); color: var(--viva-yellow); padding: 12px 30px; cursor: pointer; font-family: 'Arial Black'; font-size: 14px; text-transform: uppercase; box-shadow: 6px 6px 0px #000; }
         .btn-skip { background: var(--viva-pink); border-color: #fff; color: #fff; }
 
-        /* Fullscreen Skalierung */
-        @media (min-height: 1000px) {
-            #viva-header { transform: scale(0.7); top: 20px; right: 20px; }
-            #viva-clock { font-size: 28px; top: 20px; left: 20px; }
-            #tag { padding: 15px 40px; border-width: 5px; bottom: 15%; }
-            #video-title { font-size: 22px; }
-            .control-btn { padding: 8px 20px; font-size: 11px; }
+        /* --- FULLSCREEN SCALING (Deutliche Verkleinerung) --- */
+        @media screen and (min-height: 800px) {
+            #viva-header { transform: scale(0.6); top: 20px; right: 20px; }
+            #viva-clock { font-size: 24px; top: 20px; left: 20px; }
+            #tag { padding: 12px 35px; border-width: 5px; bottom: 12%; box-shadow: 6px 6px 0px var(--viva-pink); }
+            #video-title { font-size: 20px; }
+            .viva-controls { bottom: 20px; transform: translateX(-50%) scale(0.8); }
         }
     </style>
 </head>
@@ -213,5 +219,5 @@
     }
 </script>
 </body>
-    </html>
-    
+                    </html>
+                    
